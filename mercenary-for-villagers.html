@@ -1,0 +1,3208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mercenary For Villagers</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@500;700&display=swap');
+  :root{ --iron:#2b2926; --blood:#8a1f1f; --blood-bright:#c73e3e; --amber:#d68a3c; --bone:#e8dcc8; --steel:#9aa3ab; }
+  html,body{margin:0;padding:0;overflow:hidden;background:#0b0906;height:100%;}
+  canvas{display:block;}
+  #hud{ position:fixed; inset:0; pointer-events:none; font-family:'Cinzel',serif; color:var(--bone); text-shadow:0 2px 6px rgba(0,0,0,.9); }
+  .crosshair{ position:absolute; top:50%; left:50%; width:22px; height:22px; margin:-11px 0 0 -11px; }
+  .crosshair:before, .crosshair:after{ content:''; position:absolute; background:var(--bone); opacity:.85; }
+  .crosshair:before{ left:50%; top:0; width:2px; height:100%; margin-left:-1px;}
+  .crosshair:after{ top:50%; left:0; height:2px; width:100%; margin-top:-1px;}
+  .crosshair.hit:before, .crosshair.hit:after{ background:var(--blood-bright); }
+  #drawBar{ position:absolute; top:50%; left:50%; margin:18px 0 0 -30px; width:60px; height:6px; background:rgba(0,0,0,.5); border:1px solid rgba(232,220,200,.4); border-radius:3px; overflow:hidden; display:none;}
+  #drawBarFill{ height:100%; width:0%; background:linear-gradient(90deg,#d68a3c,#ffdca0); }
+  #interactPrompt{ position:absolute; top:58%; left:50%; transform:translateX(-50%); font-size:14px; letter-spacing:1px; background:rgba(15,12,9,.8); border:1px solid rgba(214,138,60,.5); border-radius:5px; padding:6px 14px; display:none; }
+  #loiterPrompt{ position:absolute; top:66%; left:50%; transform:translateX(-50%); font-size:12.5px; letter-spacing:.5px; color:var(--blood-bright); background:rgba(15,12,9,.8); border:1px solid rgba(199,62,62,.5); border-radius:5px; padding:5px 12px; display:none; }
+  #topbar{ position:absolute; top:18px; left:0; right:0; display:flex; justify-content:space-between; padding:0 26px; gap:10px; }
+  .pill{ background:linear-gradient(180deg, rgba(30,26,20,.85), rgba(15,12,9,.85)); border:1px solid rgba(214,138,60,.4); border-radius:6px; padding:8px 16px; letter-spacing:.5px; }
+  .gold{ font-family:'Cinzel Decorative', serif; font-weight:700; color:var(--amber); font-size:20px; }
+  .kills{ font-size:13px; }
+  .rightpills{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; max-width:64%;}
+  #alertPill{ border-color:rgba(199,62,62,.5); }
+  #disguisePill{ border-color:rgba(120,170,220,.5); display:none; }
+  #bars{ position:absolute; bottom:22px; left:26px; width:260px; }
+  .bar-label{ font-size:11px; letter-spacing:2px; text-transform:uppercase; opacity:.8; margin-bottom:3px;}
+  .bar-track{ width:100%; height:14px; background:rgba(0,0,0,.55); border:1px solid rgba(232,220,200,.25); border-radius:3px; overflow:hidden; margin-bottom:10px; }
+  .bar-fill{ height:100%; transition:width .12s ease-out; }
+  #healthFill{ background:linear-gradient(90deg,#5a0f0f,var(--blood-bright)); }
+  #armorFill{ background:linear-gradient(90deg,#3a5a6e,#9ecbe0); }
+  #staminaFill{ background:linear-gradient(90deg,#8a5a1f,var(--amber)); }
+  #vignette{ position:absolute; inset:0; box-shadow:inset 0 0 220px 40px rgba(150,0,0,0); transition:box-shadow .08s; }
+  #banner{ position:absolute; top:60px; left:50%; transform:translateX(-50%); font-family:'Cinzel Decorative',serif; font-size:15px; color:var(--blood-bright); letter-spacing:1px; opacity:0; transition:opacity .3s; white-space:nowrap; }
+  #overlay{ position:fixed; inset:0; background:radial-gradient(ellipse at center, rgba(30,20,12,.94), rgba(4,3,2,.99)); display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center; font-family:'Cinzel',serif; color:var(--bone); z-index:10; overflow-y:auto; padding:30px 16px; box-sizing:border-box; }
+  #overlay h1{ font-family:'Cinzel Decorative',serif; font-size:34px; color:var(--blood-bright); margin:0 0 4px; text-shadow:0 0 30px rgba(199,62,62,.5), 0 4px 0 #000; letter-spacing:1.5px; }
+  #overlay .sub{ color:var(--amber); letter-spacing:4px; font-size:12px; margin-bottom:24px; text-transform:uppercase;}
+  #overlay .controls{ font-size:13px; line-height:1.9; color:#cfc3ae; margin-bottom:20px; max-width:560px;}
+  #overlay .controls b{ color:var(--amber); }
+  .bigbtn{ font-family:'Cinzel Decorative',serif; font-size:18px; padding:14px 40px; background:linear-gradient(180deg,var(--blood-bright),var(--blood)); color:var(--bone); border:1px solid rgba(232,220,200,.4); border-radius:4px; cursor:pointer; letter-spacing:2px; box-shadow:0 6px 18px rgba(0,0,0,.5); margin-top:6px; }
+  .bigbtn:hover{ filter:brightness(1.15); }
+  .bigbtn:disabled{ filter:grayscale(.8) brightness(.6); cursor:not-allowed; }
+  #hint{ position:fixed; top:16px; left:50%; transform:translateX(-50%); color:var(--bone); font-family:'Cinzel',serif; font-size:13px; opacity:.75; z-index:5; pointer-events:none; }
+  .loadingSpinner{ width:26px; height:26px; border:3px solid rgba(232,220,200,.18); border-top-color:var(--amber); border-radius:50%; animation:spin .85s linear infinite; margin:6px auto 2px; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .statusrow{ display:flex; gap:18px; margin-bottom:20px; font-size:12.5px; color:var(--steel); flex-wrap:wrap; justify-content:center;}
+  .statusrow b{ color:var(--amber); }
+  .sectionLabel{ font-family:'Cinzel Decorative',serif; font-size:13px; color:var(--amber); letter-spacing:2px; text-transform:uppercase; margin:4px 0 12px; }
+  .shopgrid{ display:flex; gap:14px; flex-wrap:wrap; justify-content:center; max-width:1000px; margin-bottom:20px;}
+  .wcard{ width:180px; background:linear-gradient(180deg, rgba(40,32,22,.9), rgba(18,14,10,.92)); border:1px solid rgba(154,163,171,.35); border-radius:8px; padding:12px; text-align:left; }
+  .wcard.equipped{ border-color:#8fbf6a; box-shadow:0 0 14px rgba(143,191,106,.25); }
+  .wcard h4{ font-family:'Cinzel Decorative',serif; font-size:14px; margin:0 0 5px; color:var(--bone);}
+  .wcard .stat{ font-size:10.5px; color:#b8ac96; margin-bottom:2px; }
+  .wcard button{ margin-top:9px; width:100%; font-family:'Cinzel',serif; font-weight:700; padding:8px; border-radius:4px; cursor:pointer; background:rgba(214,138,60,.25); border:1px solid var(--amber); color:var(--bone); font-size:11.5px; letter-spacing:1px; }
+  .wcard button.owned{ background:rgba(143,191,106,.2); border-color:#8fbf6a; }
+  .wcard button:disabled{ background:rgba(80,80,80,.2); border-color:#555; color:#888; cursor:not-allowed; }
+
+  /* ===== Ending sequence ===== */
+  #endingFade{ position:fixed; inset:0; background:#000; opacity:0; transition:opacity 3.2s ease; z-index:40; pointer-events:none; }
+  #endingScreen{ position:fixed; inset:0; z-index:41; display:none; align-items:center; justify-content:center; overflow:hidden; pointer-events:none; background:transparent; }
+  #endingTextWrap{ position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+  #endingText{ position:absolute; left:0; right:0; top:100%; text-align:center; font-family:'Cinzel Decorative',serif; color:var(--bone); font-size:26px; line-height:2.4; letter-spacing:1px; text-shadow:0 0 18px rgba(0,0,0,.9), 0 2px 4px #000; padding:0 8vw; box-sizing:border-box; animation:endingCrawl 38s linear forwards; animation-play-state:paused; }
+  @keyframes endingCrawl{ from{ top:100%; } to{ top:-140%; } }
+</style>
+</head>
+<body>
+<div id="hud" style="display:none">
+  <div class="crosshair" id="crosshair"></div>
+  <div id="drawBar"><div id="drawBarFill"></div></div>
+  <div id="interactPrompt">[E] Open Shop</div>
+  <div id="tentPrompt" style="position:absolute; top:58%; left:50%; transform:translateX(-50%); font-size:14px; letter-spacing:1px; background:rgba(15,12,9,.8); border:1px solid rgba(120,170,220,.5); border-radius:5px; padding:6px 14px; display:none;">[E] Missions</div>
+  <div id="loiterPrompt">Villagers are alarmed — the guard countdown is active</div>
+  <div id="topbar">
+    <div class="pill gold">⛁ <span id="goldCount">0</span> gold</div>
+    <div class="rightpills">
+      <div class="pill kills" id="weaponPill">🗡️ Rusty Shortsword</div>
+      <div class="pill kills" id="bowPill" style="display:none">🏹 —</div>
+      <div class="pill kills" id="disguisePill">🎭 Disguised</div>
+      <div class="pill kills" id="alertPill">⚠ Alert 0</div>
+      <div class="pill kills" id="missionPill" style="display:none">📜 Missions 0</div>
+      <div class="pill kills">Kills: <span id="killCount">0</span></div>
+    </div>
+  </div>
+  <div id="banner"></div>
+  <div id="bossHealthWrap" style="position:absolute; top:16px; left:50%; transform:translateX(-50%); width:380px; text-align:center; display:none;">
+    <div class="bar-label" style="color:#caa6ff;">The Tower Wizard</div>
+    <div class="bar-track" style="border-color:rgba(123,44,255,.45);"><div class="bar-fill" id="bossHealthFill" style="width:100%; background:linear-gradient(90deg,#3b1cff,#b98cff);"></div></div>
+  </div>
+  <div id="bars">
+    <div class="bar-label" id="armorLabel" style="display:none">Armor</div>
+    <div class="bar-track" id="armorTrack" style="display:none"><div class="bar-fill" id="armorFill" style="width:100%"></div></div>
+    <div class="bar-label">Health</div>
+    <div class="bar-track"><div class="bar-fill" id="healthFill" style="width:100%"></div></div>
+    <div class="bar-label">Stamina</div>
+    <div class="bar-track"><div class="bar-fill" id="staminaFill" style="width:100%"></div></div>
+  </div>
+</div>
+<div id="vignette"></div>
+<div id="hint" style="display:none">Esc pause · Space switch weapon · E shop</div>
+<div id="overlay"></div>
+<div id="endingFade"></div>
+<div id="endingScreen">
+  <div id="endingTextWrap"><div id="endingText"></div></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const GUARD_TYPES = {
+    sentry:    { label:'Guard',     hpMult:1.00, dmgMult:1.00, speedMult:1.00, range:2.3,  ranged:false, atkCooldown:1.3 },
+    spear:     { label:'Spearman',  hpMult:1.05, dmgMult:1.15, speedMult:0.95, range:3.0,  ranged:false, atkCooldown:1.1 },
+    archer:    { label:'Archer',    hpMult:0.75, dmgMult:0.85, speedMult:1.05, range:16,   ranged:true,  atkCooldown:1.7 },
+    berserker: { label:'Berserker', hpMult:1.65, dmgMult:1.40, speedMult:1.15, range:2.6,  ranged:false, atkCooldown:1.6 },
+  };
+  const BASE_GUARD_HP = 150, BASE_GUARD_DMG = [8,14], BASE_GUARD_SPEED = 5.4;
+
+  const WEAPONS = [
+    { id:'rusty', name:'Rusty Shortsword', type:'melee', cost:0, dmg:[34,52], range:3.2, cooldown:.5, arc:48, bladeColor:0x9a8f7c, glow:0 },
+    { id:'iron', name:'Iron Longsword', type:'melee', cost:90, dmg:[46,66], range:3.5, cooldown:.46, arc:50, bladeColor:0xb9bec4, glow:0 },
+    { id:'war', name:'War Saber', type:'melee', cost:200, dmg:[60,85], range:3.7, cooldown:.42, arc:52, bladeColor:0x8fa8c9, glow:0.15 },
+    { id:'berserker', name:"Berserker's Fury", type:'melee', cost:340, dmg:[78,110], range:3.9, cooldown:.38, arc:55, bladeColor:0xc73e3e, glow:0.6 },
+    { id:'shortbow', name:"Hunter's Shortbow", type:'bow', cost:220, dmg:[20,60], range:40, drawTime:0.85, cooldown:.40, arc:4.0, limbColor:0x5a3f24, glow:0 },
+    { id:'longbow', name:'Warbow of Ash', type:'bow', cost:420, dmg:[32,98], range:55, drawTime:1.05, cooldown:.35, arc:3.5, limbColor:0x3a2a55, glow:0.25 },
+    { id:'flamebow', name:'Flame Bow', type:'bow', cost:0, dmg:[260,420], range:75, drawTime:0.75, cooldown:.28, arc:4.5, limbColor:0x7a1608, glow:1.0, fireball:true },
+  ];
+  const ownedWeapons = new Set(['rusty']);
+  let equippedWeaponId = 'rusty';
+  let equippedBowId = null;
+
+  const ARMORS = [
+    { id:'leather', name:'Leather Vest', cost:150, armorHp:40 },
+    { id:'chain', name:'Chainmail Hauberk', cost:320, armorHp:80 },
+    { id:'plate', name:'Iron Plate Armor', cost:550, armorHp:130 },
+    { id:'shield', name:'Round Shield', cost:260, armorHp:25, blockArrows:0.8 },
+    { id:'disguise', name:'Villager Disguise', cost:200, armorHp:15, disguise:true },
+  ];
+  const ownedArmor = new Set();
+  let equippedArmorId = null;
+  let currentArmor = null;
+  let disguiseBrokenUntil = 0;
+  function isDisguised(){
+    return !!(currentArmor && currentArmor.disguise) && (performance.now()/1000) > disguiseBrokenUntil;
+  }
+  function breakDisguise(){
+    if(currentArmor && currentArmor.disguise) disguiseBrokenUntil = performance.now()/1000 + 15;
+  }
+
+  let gold = 0;
+
+  // ================= THREE SETUP =================
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0d0f16);
+  scene.fog = new THREE.Fog(0x0d0f16, 70, 720);
+
+  const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance', stencil:false });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  // Capping pixel ratio keeps frame times sane on high-DPI (retina/4K) displays,
+  // which otherwise force the GPU to shade several times more pixels than needed.
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
+  document.body.appendChild(renderer.domElement);
+
+  const CAMERA_DEFAULT_FOV = 75;
+  const BOW_AIM_FOV = 45;
+  let targetCameraFov = CAMERA_DEFAULT_FOV;
+  const camera = new THREE.PerspectiveCamera(CAMERA_DEFAULT_FOV, innerWidth/innerHeight, 0.1, 1400);
+  const EYE_HEIGHT = 1.7;
+  const player = new THREE.Object3D();
+  let horse = null;
+  let horseOwned = false;
+  let horseMounted = false;
+  const HORSE_COST = 180;
+  player.add(camera);
+  camera.position.set(0, EYE_HEIGHT, 0);
+  scene.add(player);
+
+  window.addEventListener('resize', ()=>{
+    camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
+  });
+
+  // ================= 24-MINUTE DAY / NIGHT CYCLE =================
+  // A full in-game day is 24 real minutes: 12 minutes of daylight + 12 minutes of night.
+  // The cycle starts at dawn, with the sun just above the ocean horizon to the east.
+  const DAY_LENGTH = 24 * 60;
+  const DAYLIGHT_LENGTH = 12 * 60;
+  let worldTime = 0; // seconds since dawn; intentionally starts at dawn every new game
+  let dayNumber = 1;
+
+  const ambient = new THREE.AmbientLight(0x5a6170, 0.48);
+  scene.add(ambient);
+  const sunLight = new THREE.DirectionalLight(0xffd1a0, 1.0);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.set(1024,1024);
+  sunLight.shadow.camera.left=-120; sunLight.shadow.camera.right=120;
+  sunLight.shadow.camera.top=120; sunLight.shadow.camera.bottom=-120;
+  scene.add(sunLight);
+
+  const nightLight = new THREE.DirectionalLight(0x9fb0ff, 0.18);
+  nightLight.position.set(-50, 70, -30);
+  scene.add(nightLight);
+
+  // Dynamic sky dome: warm red/orange around the rising/setting sun, brighter blue overhead,
+  // and a deliberately readable (not pitch-black) night.
+  const skyUniforms = {
+    sunDir: { value: new THREE.Vector3(1, 0.03, 0).normalize() },
+    daylight: { value: 0.02 },
+    glow: { value: 1.0 }
+  };
+  const skyMat = new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    depthWrite: false,
+    uniforms: skyUniforms,
+    vertexShader: `
+      varying vec3 vWorldDir;
+      void main(){
+        vec4 wp = modelMatrix * vec4(position,1.0);
+        vWorldDir = normalize(wp.xyz - cameraPosition);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+      }`,
+    fragmentShader: `
+      uniform vec3 sunDir;
+      uniform float daylight;
+      uniform float glow;
+      varying vec3 vWorldDir;
+      void main(){
+        vec3 d = normalize(vWorldDir);
+        float h = clamp(d.y * 0.5 + 0.5, 0.0, 1.0);
+        vec3 nightHorizon = vec3(0.055,0.065,0.10);
+        vec3 nightZenith  = vec3(0.015,0.025,0.055);
+        vec3 dayHorizon   = vec3(0.92,0.38,0.20);
+        vec3 dayZenith    = vec3(0.30,0.58,0.88);
+        vec3 skyDay = mix(dayHorizon, dayZenith, smoothstep(0.18,0.95,h));
+        vec3 skyNight = mix(nightHorizon, nightZenith, smoothstep(0.05,0.95,h));
+        vec3 col = mix(skyNight, skyDay, daylight);
+        float sunDot = max(dot(d, normalize(sunDir)), 0.0);
+        float horizonSun = exp(-pow(max(sunDir.y,0.0) * 2.2, 2.0));
+        float sunGlow = pow(sunDot, 10.0) * 0.45 + pow(sunDot, 70.0) * 0.8;
+        float redGlow = pow(sunDot, 3.0) * 0.55 * (0.35 + 0.65*horizonSun) * glow;
+        col += vec3(1.0,0.24,0.08) * redGlow;
+        col += vec3(1.0,0.68,0.30) * sunGlow * (0.45 + 0.55*daylight);
+        gl_FragColor = vec4(col,1.0);
+      }`
+  });
+  const skyDome = new THREE.Mesh(new THREE.SphereGeometry(1000,32,16), skyMat);
+  skyDome.frustumCulled = false;
+  scene.add(skyDome);
+
+  // Small glowing sun disc, kept above the ocean horizon at dawn.
+  const sunCanvas = document.createElement('canvas');
+  sunCanvas.width = sunCanvas.height = 128;
+  const sunCtx = sunCanvas.getContext('2d');
+  const sunGrad = sunCtx.createRadialGradient(64,64,4,64,64,60);
+  sunGrad.addColorStop(0,'rgba(255,250,210,1)');
+  sunGrad.addColorStop(.22,'rgba(255,220,120,.95)');
+  sunGrad.addColorStop(.55,'rgba(255,120,45,.38)');
+  sunGrad.addColorStop(1,'rgba(255,70,20,0)');
+  sunCtx.fillStyle=sunGrad; sunCtx.fillRect(0,0,128,128);
+  const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(sunCanvas),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
+  sunSprite.scale.set(38,38,1);
+  scene.add(sunSprite);
+
+  const DAY_LABEL = document.createElement('div');
+  DAY_LABEL.id='dayTimePill';
+  DAY_LABEL.className='pill kills';
+  DAY_LABEL.style.position='absolute';
+  DAY_LABEL.style.top='72px';
+  DAY_LABEL.style.left='26px';
+  DAY_LABEL.style.zIndex='3';
+  DAY_LABEL.textContent='DAY 1 • DAWN';
+  document.body.appendChild(DAY_LABEL);
+
+  function updateDayNight(dt){
+    worldTime += dt;
+    if(worldTime >= DAY_LENGTH){ worldTime -= DAY_LENGTH; dayNumber++; }
+
+    // 0 = dawn on the ocean horizon, 0.5 = sunset on the opposite horizon.
+    const phase = worldTime / DAY_LENGTH;
+    const daylightRaw = worldTime < DAYLIGHT_LENGTH ? worldTime / DAYLIGHT_LENGTH : 0;
+    // Smooth sunrise and sunset transitions without making the night pitch black.
+    const daylight = worldTime < DAYLIGHT_LENGTH
+      ? Math.sin(Math.PI * (worldTime / DAYLIGHT_LENGTH))
+      : 0;
+
+    // Sun makes a full half-orbit during the 12-minute daylight period.
+    // +X is the ocean side, so dawn begins directly over the ocean.
+    const dayT = Math.min(1, worldTime / DAYLIGHT_LENGTH);
+    const angle = -Math.PI * 0.02 + Math.PI * dayT;
+    const sunY = Math.sin(angle);
+    const sunX = Math.cos(angle);
+    const sunZ = Math.sin(angle * 0.28) * 0.18;
+    const sunDir = new THREE.Vector3(sunX, Math.max(0.025, sunY), sunZ).normalize();
+    skyUniforms.sunDir.value.copy(sunDir);
+    skyUniforms.daylight.value = daylight;
+    skyUniforms.glow.value = 0.65 + 0.35 * (1-daylight);
+
+    // Keep the visible sun over/near the ocean at dawn, then arc overhead and toward the city.
+    sunSprite.position.copy(sunDir).multiplyScalar(520);
+    sunSprite.visible = sunY > -0.08;
+
+    sunLight.position.copy(sunDir).multiplyScalar(180);
+    sunLight.intensity = 0.10 + daylight * 1.05;
+    sunLight.color.setHSL(0.08, 0.65, 0.48 + daylight*0.10);
+
+    ambient.intensity = 0.28 + daylight * 0.40;
+    nightLight.intensity = 0.14 + (1-daylight) * 0.10;
+
+    // The sky shader supplies the actual color; fog follows it so distant terrain doesn't pop.
+    const fogDay = new THREE.Color(0x8aa6c2);
+    const fogDawn = new THREE.Color(0x8f4b35);
+    const fogNight = new THREE.Color(0x182039);
+    let fogColor;
+    if(worldTime < DAYLIGHT_LENGTH){
+      const dawnBlend = Math.min(1, worldTime/150);
+      fogColor = fogDawn.clone().lerp(fogDay, daylight).lerp(fogDay, dawnBlend*0.35);
+    } else {
+      fogColor = fogNight.clone().lerp(fogDawn, Math.max(0, 1-(worldTime-DAYLIGHT_LENGTH)/150));
+    }
+    scene.fog.color.copy(fogColor);
+
+    const totalMinutes = Math.floor((worldTime / 60) % 24);
+    const mins = String(totalMinutes).padStart(2,'0');
+    let label = 'DAWN';
+    if(worldTime >= 120 && worldTime < 300) label='MORNING';
+    else if(worldTime >= 300 && worldTime < 540) label='DAY';
+    else if(worldTime >= 540 && worldTime < 720) label='SUNSET';
+    else if(worldTime >= 720 && worldTime < 900) label='NIGHT';
+    else if(worldTime >= 900 && worldTime < 1200) label='NIGHT';
+    else if(worldTime >= 1200) label='PRE-DAWN';
+    DAY_LABEL.textContent = `DAY ${dayNumber} • ${label} • ${mins}:00`;
+  }
+  updateDayNight(0);
+
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(2400,2400), new THREE.MeshStandardMaterial({ color: 0x445536, roughness:1 }));
+  ground.rotation.x = -Math.PI/2; ground.receiveShadow = true;
+  scene.add(ground);
+
+  const WORLD_BOUND = 600;
+
+  // ================= SWORD (first person melee weapon) =================
+  const sword = new THREE.Group();
+  const GRIP_LEN = 0.3, BLADE_LEN = 0.85;
+  const grip = new THREE.Mesh(new THREE.CylinderGeometry(.034,.04,GRIP_LEN,8), new THREE.MeshStandardMaterial({color:0x2e2013, roughness:.85}));
+  grip.rotation.x = Math.PI/2; grip.position.z = -GRIP_LEN/2;
+  sword.add(grip);
+  const pommel = new THREE.Mesh(new THREE.SphereGeometry(.05,8,6), new THREE.MeshStandardMaterial({color:0x8a8f94, metalness:.7, roughness:.3}));
+  pommel.position.z = 0.03;
+  sword.add(pommel);
+  const crossguard = new THREE.Mesh(new THREE.BoxGeometry(.34,.05,.06), new THREE.MeshStandardMaterial({color:0x8a8f94, metalness:.7, roughness:.3}));
+  crossguard.position.z = -GRIP_LEN;
+  sword.add(crossguard);
+  const bladeMat = new THREE.MeshStandardMaterial({color:0x9a8f7c, metalness:.75, roughness:.25, emissive:0x000000, emissiveIntensity:0});
+  const blade = new THREE.Mesh(new THREE.BoxGeometry(.09,.026,BLADE_LEN), bladeMat);
+  blade.position.z = -GRIP_LEN - BLADE_LEN/2;
+  sword.add(blade);
+  const bladeTip = new THREE.Mesh(new THREE.ConeGeometry(.065,.16,4), bladeMat);
+  bladeTip.rotation.x = -Math.PI/2; bladeTip.rotation.y = Math.PI/4;
+  bladeTip.position.z = -GRIP_LEN - BLADE_LEN - 0.06;
+  sword.add(bladeTip);
+  const SWORD_REST = { x: 0.32, y: -0.42, z: 0.55 };
+  sword.position.set(0.32, -0.38, -0.4);
+  sword.rotation.set(SWORD_REST.x, SWORD_REST.y, SWORD_REST.z);
+  camera.add(sword);
+  function applySwordVisual(w){
+    bladeMat.color.setHex(w.bladeColor);
+    bladeMat.emissive.setHex(w.glow>0 ? w.bladeColor : 0x000000);
+    bladeMat.emissiveIntensity = w.glow;
+  }
+
+  // ================= BOW =================
+  const bowGroup = new THREE.Group();
+  const limbMat = new THREE.MeshStandardMaterial({color:0x5a3f24, roughness:.75, emissive:0x000000, emissiveIntensity:0});
+  const gripMesh = new THREE.Mesh(new THREE.CylinderGeometry(.028,.032,.3,7), new THREE.MeshStandardMaterial({color:0x2e2013}));
+  bowGroup.add(gripMesh);
+  const limbUpper = new THREE.Mesh(new THREE.CylinderGeometry(.02,.03,.55,7), limbMat);
+  limbUpper.position.set(0,.42,0); limbUpper.rotation.x = 0.35;
+  bowGroup.add(limbUpper);
+  const limbLower = new THREE.Mesh(new THREE.CylinderGeometry(.02,.03,.55,7), limbMat);
+  limbLower.position.set(0,-.42,0); limbLower.rotation.x = -0.35;
+  bowGroup.add(limbLower);
+  const stringGroup = new THREE.Group();
+  bowGroup.add(stringGroup);
+  const bowString = new THREE.Mesh(new THREE.CylinderGeometry(.008,.008,1.357,4), new THREE.MeshBasicMaterial({color:0xe8dcc8}));
+  bowString.position.set(0,0,.0943);
+  stringGroup.add(bowString);
+  const arrowNocked = new THREE.Group();
+  const arrowShaft = new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.55,5), new THREE.MeshStandardMaterial({color:0x6b4a2f}));
+  arrowShaft.rotation.x = Math.PI/2;
+  arrowNocked.add(arrowShaft);
+  const arrowTip = new THREE.Mesh(new THREE.ConeGeometry(.03,.11,5), new THREE.MeshStandardMaterial({color:0x8a8f94, metalness:.6}));
+  arrowTip.rotation.x = -Math.PI/2; arrowTip.position.z = -0.33;
+  arrowNocked.add(arrowTip);
+  arrowNocked.position.set(0,0,.0943);
+  stringGroup.add(arrowNocked);
+  bowGroup.position.set(-0.30, -0.34, -0.52);
+  bowGroup.rotation.y = 0.12;
+  bowGroup.visible = false;
+  camera.add(bowGroup);
+  function applyBowVisual(w){
+    limbMat.color.setHex(w.limbColor);
+    limbMat.emissive.setHex(w.glow>0 ? w.limbColor : 0x000000);
+    limbMat.emissiveIntensity = w.glow;
+  }
+
+  // ================= WORLD OBJECT POOLS =================
+  const obstacles = [];
+  const villagers = [];
+  const goldPickups = [];
+  const particles = [];
+  const projectiles = [];
+  const BOSS_TOWER = { x:22, z:8, baseY:-1.0, height:44, radius:11.5, topY:43 };
+  const TOWER_STAIR_TURNS = 8;
+  const TOWER_STAIR_RADIUS = 8.4;
+  const TOWER_STAIR_INNER = 6.3;
+  const TOWER_STAIR_OUTER = 10.6;
+  const TOWER_DOOR_ANGLE = -Math.PI/2;
+  const TOWER_DOOR_GAP = 0.5;
+  let wizardBoss = null;
+  let wizardActive = false;
+  let wizardDefeated = false;
+  let wizardShotTimer = 5;
+  let wizardVulnerable = false;
+  let wizardVulnerableTimer = 0;
+  let towerStairAngle = null;
+  let towerStairProgress = 0;
+  let towerWard = null;
+  let towerWallMesh = null;
+  let towerLockNoticeTimer = 0;
+  let fountainGroup = null;
+  let missionTentGroup = null;
+
+  function makeVillagerCiv(){
+    const g = new THREE.Group();
+    const tunicColors = [0x7a6a4f,0x4f6a4f,0x6a4f4f,0x5a5a70];
+    const bodyMat = new THREE.MeshStandardMaterial({color: tunicColors[Math.floor(Math.random()*tunicColors.length)]});
+    const body = new THREE.Mesh(new THREE.BoxGeometry(.62,1.05,.4), bodyMat);
+    body.position.y = 1.0;
+    g.add(body);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(.42,.42,.42), new THREE.MeshStandardMaterial({color:0xd9b38c}));
+    head.position.y = 1.75;
+    g.add(head);
+    const armMat = new THREE.MeshStandardMaterial({color:0xd9b38c});
+    const armL = new THREE.Mesh(new THREE.BoxGeometry(.16,.7,.16), armMat);
+    armL.position.set(-.42,1.0,0); g.add(armL);
+    const armR = armL.clone(); armR.position.x = .42; g.add(armR);
+    const legMat = new THREE.MeshStandardMaterial({color:0x2e2418});
+    const legL = new THREE.Mesh(new THREE.BoxGeometry(.2,.7,.2), legMat);
+    legL.position.set(-.16,.35,0); g.add(legL);
+    const legR = legL.clone(); legR.position.x = .16; g.add(legR);
+    return g;
+  }
+
+  function makeGuard(type){
+    const g = new THREE.Group();
+    const palette = {
+      sentry:{ body:0x4a4a4a, cape:0x7a1f1f, helm:0x777d82 },
+      spear:{ body:0x5a2020, cape:0x2a1414, helm:0x8a7d5a },
+      archer:{ body:0x3a5a3a, cape:null, helm:0x2e4a2e },
+      berserker:{ body:0x2a1a33, cape:0x1a0e1a, helm:0x3a2244 },
+    }[type];
+    const bodyMat = new THREE.MeshStandardMaterial({color:palette.body});
+    const body = new THREE.Mesh(new THREE.BoxGeometry(.62,1.05,.4), bodyMat);
+    body.position.y = 1.0; body.castShadow = true;
+    g.add(body);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(.42,.42,.42), new THREE.MeshStandardMaterial({color:0xd9b38c}));
+    head.position.y = 1.75; head.castShadow = true;
+    g.add(head);
+    const helm = new THREE.Mesh(new THREE.BoxGeometry(.46,.16,.46), new THREE.MeshStandardMaterial({color:palette.helm, metalness:.5,roughness:.5}));
+    helm.position.y = 1.98; g.add(helm);
+    if(palette.cape){
+      const cape = new THREE.Mesh(new THREE.BoxGeometry(.5,.9,.08), new THREE.MeshStandardMaterial({color:palette.cape}));
+      cape.position.set(0,1.0,.24); g.add(cape);
+    }
+    const armMat = new THREE.MeshStandardMaterial({color:0xd9b38c});
+    const armL = new THREE.Mesh(new THREE.BoxGeometry(.16,.7,.16), armMat);
+    armL.position.set(-.42,1.0,0); g.add(armL);
+    const armR = armL.clone(); armR.position.x = .42; g.add(armR);
+    const legMat = new THREE.MeshStandardMaterial({color:0x2e2418});
+    const legL = new THREE.Mesh(new THREE.BoxGeometry(.2,.7,.2), legMat);
+    legL.position.set(-.16,.35,0); g.add(legL);
+    const legR = legL.clone(); legR.position.x = .16; g.add(legR);
+    if(type==='spear'){
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,1.3,5), new THREE.MeshStandardMaterial({color:0x4a3320}));
+      shaft.rotation.z = Math.PI/2.3; shaft.position.set(.55,1.1,0);
+      g.add(shaft);
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(.06,.2,5), new THREE.MeshStandardMaterial({color:0xb9bec4, metalness:.6}));
+      tip.rotation.z = Math.PI/2.3; tip.position.set(1.1,1.42,0);
+      g.add(tip);
+    } else if(type==='archer'){
+      const bowArc = new THREE.Mesh(new THREE.TorusGeometry(.32,.02,6,10,Math.PI*1.2), new THREE.MeshStandardMaterial({color:0x4a331f}));
+      bowArc.rotation.y = Math.PI/2; bowArc.position.set(-.05,1.0,-.3);
+      g.add(bowArc);
+    } else if(type==='berserker'){
+      g.scale.set(1.18,1.18,1.18);
+      [-1,1].forEach(s=>{
+        const sp = new THREE.Mesh(new THREE.ConeGeometry(.08,.22,5), new THREE.MeshStandardMaterial({color:0x8a8f94, metalness:.6}));
+        sp.position.set(.36*s,1.42,0); sp.rotation.z = -0.3*s;
+        g.add(sp);
+      });
+      const bigBlade = new THREE.Mesh(new THREE.BoxGeometry(.06,.5,.32), new THREE.MeshStandardMaterial({color:0x9a8f7c, metalness:.6}));
+      bigBlade.position.set(.5,1.3,0);
+      g.add(bigBlade);
+    }
+    return g;
+  }
+
+  function spawnGold(pos, amount){
+    const coin = new THREE.Mesh(new THREE.CylinderGeometry(.18,.18,.06,10), new THREE.MeshStandardMaterial({color:0xd4af37, emissive:0x553300, emissiveIntensity:.4, metalness:.7, roughness:.3}));
+    coin.position.set(pos.x, .3, pos.z);
+    coin.rotation.x = Math.PI/2;
+    scene.add(coin);
+    goldPickups.push({mesh:coin, amount});
+  }
+  function burst(pos, color, count){
+    for(let i=0;i<count;i++){
+      const p = new THREE.Mesh(new THREE.BoxGeometry(.08,.08,.08), new THREE.MeshBasicMaterial({color, transparent:true, opacity:1}));
+      p.position.copy(pos); p.position.y += 1.0 + Math.random()*.4;
+      scene.add(p);
+      const vel = new THREE.Vector3((Math.random()-.5)*4, Math.random()*4+1.5, (Math.random()-.5)*4);
+      particles.push({mesh:p, vel, life:1.0, maxLife:1.0});
+    }
+  }
+  function spawnBossBolt(start, target){
+    const g = new THREE.Mesh(new THREE.SphereGeometry(.42,12,10), new THREE.MeshStandardMaterial({color:0x5b2cff, emissive:0x2a0a88, emissiveIntensity:1.4, roughness:.3}));
+    g.position.copy(start); scene.add(g);
+    const dir = target.clone().sub(start).normalize();
+    projectiles.push({kind:'bossBolt', mesh:g, pos:start.clone(), vel:dir.multiplyScalar(11), life:8, radius:.65, damage:32});
+  }
+  function spawnFlameBall(start, end, target=null, damage=0){
+    const g = new THREE.Mesh(new THREE.SphereGeometry(.18,10,8), new THREE.MeshStandardMaterial({color:0xff5a12, emissive:0xff2200, emissiveIntensity:2.2, roughness:.25}));
+    const light = new THREE.PointLight(0xff4a12, 1.6, 7, 2); g.add(light);
+    g.position.copy(start); scene.add(g);
+    const dir=end.clone().sub(start);
+    const dist=dir.length();
+    if(dist>0.0001) dir.normalize(); else dir.set(0,0,-1);
+    projectiles.push({kind:'flame',mesh:g,pos:start.clone(),vel:dir.multiplyScalar(30),life:4,radius:.55,target,damage,hitApplied:false});
+  }
+  function spawnArrowProjectile(start, end, color, target=null, damage=0){
+    const g = new THREE.Group();
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.5,5), new THREE.MeshStandardMaterial({color}));
+    shaft.rotation.x = Math.PI/2;
+    g.add(shaft);
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(.035,.12,5), new THREE.MeshStandardMaterial({color:0x8a8f94, metalness:.6}));
+    tip.rotation.x = -Math.PI/2; tip.position.z = -0.31;
+    g.add(tip);
+    const dir = end.clone().sub(start);
+    const dist = dir.length();
+    dir.normalize();
+    g.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1), dir);
+    g.position.copy(start);
+    scene.add(g);
+    const duration = Math.max(0.12, dist/48);
+    projectiles.push({kind:'arrow',mesh:g,start:start.clone(),end:end.clone(),elapsed:0,duration,target,damage,hitApplied:false});
+  }
+
+  // ================= CITY GENERATION =================
+  const CITY_HALF = 9, BLOCK = 22;
+  const CITY_EXTENT = CITY_HALF*BLOCK + 6;
+  const PLAZA_BLOCKS = 4;
+  const PLAZA_HALF = (PLAZA_BLOCKS*BLOCK)/2;
+  const PLAZA_SIZE = PLAZA_HALF*2;
+  const buildingPalette = [0x6b5f4f,0x5c5248,0x726a5e,0x4a4038,0x7a6b52,0x554d43];
+  const OCEAN_X0 = CITY_EXTENT + 18;
+  const BOAT_X = OCEAN_X0 - 6;
+  const WATER_WALL_X = BOAT_X + 2.2;
+  // Central plaza locations
+  const SPAWN_POS = { x: 0, z: -8 };
+  const SHOP_POS = { x: 0, z: 8 };
+  const TENT_POS = { x: -16, z: 8 };
+  const MARKET_POS = { x: 0, z: PLAZA_HALF + 11 };
+  const VILLAGE_DEFAULTS = { halfSize:34, villagerTarget:20, guardCount:4, guardLevel:2, guardRefill:600, bossInterval:1200 };
+  const VILLAGES = [
+    { id:'outskirts', name:'Outskirt Village', x:-269, z:224, ...VILLAGE_DEFAULTS },
+    { id:'northwest', name:'Northwatch Village', x:-273, z:-202, ...VILLAGE_DEFAULTS },
+    { id:'southwest', name:'Riverside Village', x:-65, z:-283, halfSize:34, villagerTarget:20, guardCount:0, guardLevel:0, guardRefill:0, bossInterval:0, peaceful:true },
+    { id:'north', name:'Hillcrest Village', x:127, z:277, ...VILLAGE_DEFAULTS },
+    { id:'fortified', name:'Stonegate Village', x:283, z:-283, halfSize:46, villagerTarget:70, guardCount:8, guardLevel:3, guardRefill:600, bossInterval:1200, fortified:true, towerCount:4 }
+  ];
+  let villageTimers = Object.fromEntries(VILLAGES.map(v=>[v.id,{guardRefill:v.guardRefill,boss:v.bossInterval,alerted:false}]));
+
+  // ================= MISSIONS =================
+  // Bounties mark a single specific city villager for death; raids ask for a
+  // body count inside one named village. Both are accepted and turned in at
+  // the blue mission tent across from the market stall near the spawn boat.
+  const MISSIONS = [
+    { id:'bounty_merchant', type:'bounty', title:'The Tax Cheat', desc:'A merchant has been skimming coin from the plaza market. Find him walking the city streets and end it.', reward:150, status:'available', targetRef:null },
+    { id:'bounty_informant', type:'bounty', title:'The Informant', desc:"A cloaked figure has been feeding the guard captains information on your movements. He's somewhere in the city — silence him.", reward:220, status:'available', targetRef:null },
+    { id:'bounty_moneylender', type:'bounty', title:'The Moneylender', desc:'A moneylender walks the city streets weighed down with gold. End him and take his purse.', reward:300, status:'available', targetRef:null },
+    { id:'raid_outskirts', type:'raid', villageId:'outskirts', title:'Raid: Outskirt Village', desc:'Storm Outskirt Village and put 8 of its villagers to the sword.', required:8, progress:0, reward:260, status:'available' },
+    { id:'raid_northwest', type:'raid', villageId:'northwest', title:'Raid: Northwatch Village', desc:'Storm Northwatch Village and put 8 of its villagers to the sword.', required:8, progress:0, reward:260, status:'available' },
+    { id:'raid_north', type:'raid', villageId:'north', title:'Raid: Hillcrest Village', desc:'Storm Hillcrest Village and put 8 of its villagers to the sword.', required:8, progress:0, reward:260, status:'available' },
+    { id:'raid_fortified', type:'raid', villageId:'fortified', title:'Raid: Stonegate Village', desc:'Stonegate is heavily fortified and densely populated. Put 15 of its villagers to the sword for a heavier purse.', required:15, progress:0, reward:600, status:'available' },
+  ];
+
+  // The wizard's tower is sealed until every mission has been turned in.
+  function allMissionsComplete(){
+    return MISSIONS.every(m=>m.status==='done');
+  }
+
+  function makeBountyMarker(){
+    const cvs=document.createElement('canvas'); cvs.width=128; cvs.height=128; const ctx=cvs.getContext('2d');
+    ctx.beginPath(); ctx.arc(64,64,52,0,Math.PI*2); ctx.fillStyle='rgba(30,10,10,.85)'; ctx.fill();
+    ctx.strokeStyle='#c73e3e'; ctx.lineWidth=8; ctx.stroke();
+    ctx.fillStyle='#ffdca0'; ctx.font='bold 76px Cinzel, serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('!',64,70);
+    const tex=new THREE.CanvasTexture(cvs);
+    const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));
+    sprite.scale.set(.85,.85,1);
+    sprite.position.y = 2.5;
+    sprite.renderOrder = 999;
+    return sprite;
+  }
+
+  function spawnBountyTarget(mission){
+    const pos = randomStreetPos();
+    const mesh = makeVillagerCiv();
+    mesh.position.set(pos.x,0,pos.z);
+    mesh.rotation.y = Math.random()*Math.PI*2;
+    const marker = makeBountyMarker();
+    mesh.add(marker);
+    scene.add(mesh);
+    const entry = { mesh, isGuard:false, isBountyTarget:true, missionId:mission.id, tough:true, hp:130, maxHp:130,
+      state:'wander', home:new THREE.Vector3(pos.x,0,pos.z), target:new THREE.Vector3(pos.x,0,pos.z),
+      wanderTimer:Math.random()*3, calmTimer:0, dead:false, fallProgress:0, plazaBias:.10+Math.random()*.12, bountyMarker:marker };
+    villagers.push(entry);
+    mission.targetRef = entry;
+  }
+
+  function checkMissionProgress(v){
+    if(v.isBountyTarget){
+      const m = MISSIONS.find(m=>m.id===v.missionId);
+      if(m && m.status==='active'){
+        m.status='ready';
+        showBanner('BOUNTY COMPLETE — RETURN TO THE TENT');
+        updateMissionHUD();
+      }
+      return;
+    }
+    if(v.isVillageVillager && v.villageId && !v.isGuard){
+      let changed=false;
+      MISSIONS.forEach(m=>{
+        if(m.type==='raid' && m.status==='active' && m.villageId===v.villageId){
+          m.progress++;
+          changed=true;
+          if(m.progress>=m.required){ m.status='ready'; showBanner('RAID COMPLETE — RETURN TO THE TENT'); }
+        }
+      });
+      if(changed) updateMissionHUD();
+    }
+  }
+
+  function updateMissionHUD(){
+    const pill = document.getElementById('missionPill');
+    if(!pill) return;
+    const active = MISSIONS.filter(m=>m.status==='active'||m.status==='ready').length;
+    if(active>0){ pill.style.display='inline-block'; pill.textContent = `📜 Missions ${active}`; }
+    else pill.style.display='none';
+  }
+
+  function acceptMission(id){
+    const m = MISSIONS.find(m=>m.id===id);
+    if(!m || m.status!=='available') return;
+    m.status='active';
+    if(m.type==='bounty') spawnBountyTarget(m);
+    updateMissionHUD();
+  }
+
+  function turnInMission(id){
+    const m = MISSIONS.find(m=>m.id===id);
+    if(!m || m.status!=='ready') return;
+    gold += m.reward;
+    document.getElementById('goldCount').textContent = gold;
+    m.status='done';
+    showBanner(`+${m.reward} GOLD — MISSION COMPLETE`);
+    updateMissionHUD();
+  }
+
+  // Dying voids any mission that hasn't been turned in yet — bounty targets
+  // are removed from the world and raid progress resets to zero.
+  function cancelActiveMissions(){
+    let changed=false;
+    MISSIONS.forEach(m=>{
+      if(m.status==='active' || m.status==='ready'){
+        changed=true;
+        if(m.type==='bounty' && m.targetRef && !m.targetRef.dead){
+          scene.remove(m.targetRef.mesh);
+          const idx = villagers.indexOf(m.targetRef);
+          if(idx>=0) villagers.splice(idx,1);
+        }
+        m.targetRef = null;
+        m.status='available';
+        if(m.type==='raid') m.progress=0;
+      }
+    });
+    if(changed){ updateMissionHUD(); showBanner('MISSIONS CANCELLED'); }
+  }
+
+  function makeTree(){
+    const g = new THREE.Group();
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.3,.4,2.4,6), new THREE.MeshStandardMaterial({color:0x3c2b1c}));
+    trunk.position.y = 1.2; trunk.castShadow = true;
+    g.add(trunk);
+    for(let k=0;k<2;k++){
+      const foliage = new THREE.Mesh(new THREE.ConeGeometry(1.6-k*.4, 2.2, 7), new THREE.MeshStandardMaterial({color:0x2f4526}));
+      foliage.position.y = 2.6 + k*1.5; foliage.castShadow = true;
+      g.add(foliage);
+    }
+    return g;
+  }
+
+  function scatterTrees(){
+    const beltInner = CITY_EXTENT+4, beltOuter = CITY_EXTENT+90;
+    const count = 260;
+    for(let i=0;i<count;i++){
+      const ang = Math.random()*Math.PI*2;
+      const rad = beltInner + Math.random()*(beltOuter-beltInner);
+      const x = Math.cos(ang)*rad, z = Math.sin(ang)*rad;
+      if(x > WATER_WALL_X - 6) continue; // keep the shoreline clear of trees
+      const tree = makeTree();
+      const s = 0.8+Math.random()*0.6;
+      tree.position.set(x,0,z);
+      tree.rotation.y = Math.random()*Math.PI*2;
+      tree.scale.set(s,s,s);
+      scene.add(tree);
+      obstacles.push({x, z, radius:1.0*s});
+    }
+  }
+
+  function buildWell(x,z){
+    const g = new THREE.Group();
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(.95,1.05,.75,10), new THREE.MeshStandardMaterial({color:0x6b675e, roughness:.95}));
+    rim.position.y = .38; rim.castShadow = true;
+    g.add(rim);
+    const water = new THREE.Mesh(new THREE.CylinderGeometry(.75,.75,.05,10), new THREE.MeshStandardMaterial({color:0x1a3a4a}));
+    water.position.y = .72;
+    g.add(water);
+    [-1,1].forEach(s=>{
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,1.5,6), new THREE.MeshStandardMaterial({color:0x3c2b1c}));
+      post.position.set(s*.85, 1.5, 0); g.add(post);
+    });
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(1.3,.6,4), new THREE.MeshStandardMaterial({color:0x5c2020}));
+    roof.position.y = 2.55; roof.rotation.y = Math.PI/4;
+    g.add(roof);
+    g.position.set(x,0,z);
+    scene.add(g);
+    obstacles.push({x,z,radius:1.3});
+  }
+
+  function buildLampPost(x,z){
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(.06,.08,3.2,6), new THREE.MeshStandardMaterial({color:0x2b2926, metalness:.4}));
+    pole.position.set(x,1.6,z);
+    scene.add(pole);
+    const lantern = new THREE.Mesh(new THREE.BoxGeometry(.32,.4,.32), new THREE.MeshStandardMaterial({color:0xffcf8a, emissive:0xff9a3a, emissiveIntensity:1.0}));
+    lantern.position.set(x,3.35,z);
+    scene.add(lantern);
+    const light = new THREE.PointLight(0xff9a4a, 1.0, 12, 2);
+    light.position.set(x,3.35,z);
+    scene.add(light);
+    obstacles.push({x,z,radius:0.4});
+  }
+
+  function buildBoat(){
+    const g = new THREE.Group();
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(3.4,1.3,9.5), new THREE.MeshStandardMaterial({color:0x4a3320, roughness:.85}));
+    hull.position.y = 0.75; hull.castShadow = true;
+    g.add(hull);
+    [1,-1].forEach(s=>{
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(1.75,2.4,4), new THREE.MeshStandardMaterial({color:0x4a3320, roughness:.85}));
+      cap.rotation.x = Math.PI/2; cap.scale.set(1,1,.55);
+      cap.position.set(0, 0.75, s*5.6);
+      g.add(cap);
+    });
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(.09,.12,6.5,7), new THREE.MeshStandardMaterial({color:0x3b2718}));
+    mast.position.set(0,4.6,0.5);
+    g.add(mast);
+    const sail = new THREE.Mesh(new THREE.BoxGeometry(2.6,3.0,.08), new THREE.MeshStandardMaterial({color:0x8a1f1f, roughness:.8}));
+    sail.position.set(0,5.4,0.5);
+    g.add(sail);
+    const prowHead = new THREE.Mesh(new THREE.ConeGeometry(.3,1.0,5), new THREE.MeshStandardMaterial({color:0xb9bec4, metalness:.6}));
+    prowHead.rotation.x = -Math.PI/2;
+    prowHead.position.set(0,1.6,5.9);
+    g.add(prowHead);
+    for(let i=0;i<6;i++){
+      const shield = new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.06,10), new THREE.MeshStandardMaterial({color: i%2===0?0x8a1f1f:0xb9bec4, metalness:.4}));
+      shield.rotation.z = Math.PI/2;
+      shield.position.set(1.75, 1.1, -4+i*1.6);
+      g.add(shield);
+      const shield2 = shield.clone(); shield2.position.x = -1.75;
+      g.add(shield2);
+    }
+    g.position.set(BOAT_X, 0, 0);
+    g.rotation.y = Math.PI/2;
+    scene.add(g);
+    obstacles.push({x:BOAT_X, z:0, radius:5.2});
+  }
+
+  function buildOcean(){
+    // Put the shoreline directly beside the boat and render it above the world ground
+    // so the ocean/beach are actually visible instead of being covered by the ground plane.
+    const shorelineX = BOAT_X + 4.5;
+    const beachWidth = 9;
+    const oceanStart = shorelineX + beachWidth;
+    const x1 = WORLD_BOUND + 160;
+    const oceanWidth = x1 - oceanStart;
+    const oceanCx = (oceanStart+x1)/2;
+
+    const ocean = new THREE.Mesh(
+      new THREE.PlaneGeometry(oceanWidth, 420),
+      new THREE.MeshStandardMaterial({color:0x1a4a6b, roughness:.35, metalness:.15, transparent:true, opacity:.94})
+    );
+    ocean.rotation.x = -Math.PI/2;
+    ocean.position.set(oceanCx, 0.045, 0);
+    scene.add(ocean);
+
+    const beach = new THREE.Mesh(
+      new THREE.PlaneGeometry(beachWidth, 420),
+      new THREE.MeshStandardMaterial({color:0xc9b385, roughness:1})
+    );
+    beach.rotation.x = -Math.PI/2;
+    beach.position.set(shorelineX + beachWidth/2, 0.055, 0);
+    scene.add(beach);
+
+    // Shallow-water strip makes the shoreline obvious from the boat.
+    const shallows = new THREE.Mesh(
+      new THREE.PlaneGeometry(4, 420),
+      new THREE.MeshStandardMaterial({color:0x2b6f8f, roughness:.3, metalness:.08, transparent:true, opacity:.9})
+    );
+    shallows.rotation.x = -Math.PI/2;
+    shallows.position.set(shorelineX + beachWidth + 2, 0.06, 0);
+    scene.add(shallows);
+  }
+
+  function buildTownSquare(){
+    const border = 5;
+    const plaza = new THREE.Mesh(
+      new THREE.PlaneGeometry(PLAZA_SIZE, PLAZA_SIZE),
+      new THREE.MeshStandardMaterial({color:0x746a5b, roughness:0.95})
+    );
+    plaza.rotation.x = -Math.PI/2;
+    plaza.position.set(0,0.075,0);
+    plaza.receiveShadow = true;
+    scene.add(plaza);
+
+    const inner = new THREE.Mesh(
+      new THREE.PlaneGeometry(PLAZA_SIZE-10, PLAZA_SIZE-10),
+      new THREE.MeshStandardMaterial({color:0x8a8071, roughness:0.9})
+    );
+    inner.rotation.x = -Math.PI/2;
+    inner.position.set(0,0.085,0);
+    inner.receiveShadow = true;
+    scene.add(inner);
+
+    // Four broad entrances make the square feel like the city's main gathering place.
+    const fountain = new THREE.Group();
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(3.2,3.6,0.7,12), new THREE.MeshStandardMaterial({color:0x66615a,roughness:.95}));
+    base.position.y=.35; fountain.add(base);
+    const water = new THREE.Mesh(new THREE.CylinderGeometry(2.6,2.6,.08,16), new THREE.MeshStandardMaterial({color:0x285c78,metalness:.1,roughness:.25}));
+    water.position.y=.74; fountain.add(water);
+    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(.45,.55,2.2,10), new THREE.MeshStandardMaterial({color:0x777169,roughness:.9}));
+    pillar.position.y=1.55; fountain.add(pillar);
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(.8,.55,.45,10), new THREE.MeshStandardMaterial({color:0x81786e,roughness:.9}));
+    top.position.y=2.8; fountain.add(top);
+    fountain.position.set(0,0,0);
+    scene.add(fountain);
+    fountainGroup = fountain;
+    obstacles.push({x:0,z:0,radius:4.1});
+
+    // Four corner lights help mark the plaza at night.
+    const corners = PLAZA_HALF-6;
+    [[-corners,-corners],[corners,-corners],[-corners,corners],[corners,corners]].forEach(([x,z])=>buildLampPost(x,z));
+
+    // Decorative stone border; villagers can still cross the plaza freely.
+    const edgeMat = new THREE.MeshStandardMaterial({color:0x403b36,roughness:.95});
+    const edges=[
+      new THREE.Mesh(new THREE.BoxGeometry(PLAZA_SIZE+border,0.28,0.45),edgeMat),
+      new THREE.Mesh(new THREE.BoxGeometry(PLAZA_SIZE+border,0.28,0.45),edgeMat),
+      new THREE.Mesh(new THREE.BoxGeometry(0.45,0.28,PLAZA_SIZE+border),edgeMat),
+      new THREE.Mesh(new THREE.BoxGeometry(0.45,0.28,PLAZA_SIZE+border),edgeMat)
+    ];
+    edges[0].position.set(0,.14,PLAZA_HALF);
+    edges[1].position.set(0,.14,-PLAZA_HALF);
+    edges[2].position.set(PLAZA_HALF,.14,0);
+    edges[3].position.set(-PLAZA_HALF,.14,0);
+    edges.forEach(e=>{ scene.add(e); });
+  }
+
+  function buildMarketPlace(){
+    // Busy market just outside the central 4x4-block town square.
+    const g = new THREE.Group();
+    const floor = new THREE.Mesh(
+      new THREE.BoxGeometry(PLAZA_SIZE*0.72, 0.18, 10),
+      new THREE.MeshStandardMaterial({color:0x6a5a46, roughness:.95})
+    );
+    floor.position.y = 0.09;
+    g.add(floor);
+
+    const awningColors = [0x8a1f1f,0x335b4a,0x75602f,0x4f5274];
+    for(let i=0;i<6;i++){
+      const x = -PLAZA_SIZE*0.3 + i*(PLAZA_SIZE*0.6/5);
+      const stall = new THREE.Group();
+      const counter = new THREE.Mesh(new THREE.BoxGeometry(3.6,1.2,1.8), new THREE.MeshStandardMaterial({color:0x4a3320,roughness:.85}));
+      counter.position.set(x,0.6,0);
+      stall.add(counter);
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(4.1,0.18,2.4), new THREE.MeshStandardMaterial({color:awningColors[i%awningColors.length],roughness:.8}));
+      roof.position.set(x,2.7,0);
+      stall.add(roof);
+      [-1,1].forEach(side=>{
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(.06,.08,2.7,6), new THREE.MeshStandardMaterial({color:0x3c2b1c}));
+        post.position.set(x-1.6,1.35,side*0.8);
+        stall.add(post);
+      });
+      g.add(stall);
+      obstacles.push({x:MARKET_POS.x+x, z:MARKET_POS.z, radius:2.4});
+    }
+    g.position.set(MARKET_POS.x,0,MARKET_POS.z);
+    scene.add(g);
+
+    const marketLight = new THREE.PointLight(0xffcf8a, 1.8, 22, 2);
+    marketLight.position.set(MARKET_POS.x,5,MARKET_POS.z);
+    scene.add(marketLight);
+  }
+
+  function addWaterBarrier(){
+    // Previously placed an invisible wall a couple of units before the beach,
+    // which blocked the player from ever reaching the shore or ocean at all.
+    // The ocean is meant to be enterable — the general WORLD_BOUND clamp is
+    // the only limit now, so this is intentionally a no-op.
+  }
+
+  function buildCity(){
+    let torchCount = 0;
+    // collect window/door transforms, build as InstancedMesh afterward for performance
+    const winZ = [], winX = [], doors = [];
+    for(let i=-CITY_HALF;i<=CITY_HALF;i++){
+      for(let j=-CITY_HALF;j<=CITY_HALF;j++){
+        if(i>=-2 && i<=1 && j>=-2 && j<=1) continue;
+        const cx = i*BLOCK + (Math.random()-0.5)*2, cz = j*BLOCK + (Math.random()-0.5)*2;
+        const w = 8+Math.random()*3, d = 8+Math.random()*3, h = 7+Math.random()*16;
+        const color = buildingPalette[Math.floor(Math.random()*buildingPalette.length)];
+        const bld = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshStandardMaterial({color, roughness:.9}));
+        bld.position.set(cx, h/2, cz);
+        bld.castShadow = true; bld.receiveShadow = true;
+        scene.add(bld);
+        const cap = new THREE.Mesh(new THREE.BoxGeometry(w+0.5,0.5,d+0.5), new THREE.MeshStandardMaterial({color:0x33302a}));
+        cap.position.set(cx, h+0.25, cz);
+        scene.add(cap);
+        // corner-safe collision circle (covers the full rectangular footprint, including corners)
+        obstacles.push({x:cx, z:cz, radius: Math.sqrt((w/2)*(w/2)+(d/2)*(d/2)) + 0.35});
+
+        if((i*7+j*13+31) % 7 === 0 && torchCount < 18){
+          torchCount++;
+          const torch = new THREE.PointLight(0xff9a4a, 1.1, 14, 2);
+          torch.position.set(cx + w/2 + 0.3, 3.2, cz);
+          scene.add(torch);
+          const bracket = new THREE.Mesh(new THREE.BoxGeometry(.15,.15,.4), new THREE.MeshStandardMaterial({color:0x2b2926}));
+          bracket.position.set(cx + w/2 + 0.15, 3.2, cz);
+          scene.add(bracket);
+        }
+
+        // windows
+        const floors = Math.min(5, Math.max(1, Math.round(h/4.2)));
+        for(let f=0; f<floors; f++){
+          const wy = 1.7 + f*3.6;
+          if(wy > h-1) break;
+          const winsW = Math.min(3, Math.max(1, Math.round(w/3.4)));
+          for(let k=0;k<winsW;k++){
+            if(Math.random()<0.22) continue;
+            const wx = -w/2 + (k+0.5)*(w/winsW);
+            winZ.push([cx+wx, wy, cz+d/2+0.03]);
+            winZ.push([cx+wx, wy, cz-d/2-0.03]);
+          }
+          const winsD = Math.min(3, Math.max(1, Math.round(d/3.4)));
+          for(let k=0;k<winsD;k++){
+            if(Math.random()<0.22) continue;
+            const wz = -d/2 + (k+0.5)*(d/winsD);
+            winX.push([cx+w/2+0.03, wy, cz+wz]);
+            winX.push([cx-w/2-0.03, wy, cz+wz]);
+          }
+        }
+        // door on the -Z face
+        doors.push([cx, 1.1, cz - d/2 - 0.04]);
+      }
+    }
+
+    // instanced windows (2 draw calls total regardless of city size)
+    if(winZ.length){
+      const winZMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.9,1.1,0.06), new THREE.MeshStandardMaterial({color:0xffdca0, emissive:0xffcf7a, emissiveIntensity:0.85}), winZ.length);
+      const d1 = new THREE.Object3D();
+      winZ.forEach((p,idx)=>{ d1.position.set(p[0],p[1],p[2]); d1.updateMatrix(); winZMesh.setMatrixAt(idx, d1.matrix); });
+      winZMesh.instanceMatrix.needsUpdate = true;
+      scene.add(winZMesh);
+    }
+    if(winX.length){
+      const winXMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.06,1.1,0.9), new THREE.MeshStandardMaterial({color:0xffdca0, emissive:0xffcf7a, emissiveIntensity:0.85}), winX.length);
+      const d2 = new THREE.Object3D();
+      winX.forEach((p,idx)=>{ d2.position.set(p[0],p[1],p[2]); d2.updateMatrix(); winXMesh.setMatrixAt(idx, d2.matrix); });
+      winXMesh.instanceMatrix.needsUpdate = true;
+      scene.add(winXMesh);
+    }
+    if(doors.length){
+      const doorMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1.3,2.2,0.08), new THREE.MeshStandardMaterial({color:0x2e2013, roughness:.85}), doors.length);
+      const d3 = new THREE.Object3D();
+      doors.forEach((p,idx)=>{ d3.position.set(p[0],p[1],p[2]); d3.updateMatrix(); doorMesh.setMatrixAt(idx, d3.matrix); });
+      doorMesh.instanceMatrix.needsUpdate = true;
+      scene.add(doorMesh);
+    }
+
+    // paved city floor
+    const cityFloor = new THREE.Mesh(new THREE.PlaneGeometry(CITY_EXTENT*2, CITY_EXTENT*2), new THREE.MeshStandardMaterial({color:0x5c5344, roughness:1}));
+    cityFloor.rotation.x = -Math.PI/2; cityFloor.position.y = 0.02; cityFloor.receiveShadow = true;
+    scene.add(cityFloor);
+
+    // lamp posts + wells at a sample of street intersections
+    let lampCount=0, wellCount=0;
+    for(let i=-CITY_HALF;i<CITY_HALF;i+=2){
+      for(let j=-CITY_HALF;j<CITY_HALF;j+=2){
+        const ix = i*BLOCK+BLOCK/2, iz = j*BLOCK+BLOCK/2;
+        if(Math.hypot(ix,iz) < 10) continue;
+        const r = Math.abs((i*11+j*17+5))%10;
+        if(r<4 && lampCount<22){ lampCount++; buildLampPost(ix,iz); }
+        else if(r===7 && wellCount<10){ wellCount++; buildWell(ix,iz); }
+      }
+    }
+
+  }
+
+  function buildShopStall(){
+    const stallBase = new THREE.Mesh(new THREE.BoxGeometry(3.2,1.6,2.2), new THREE.MeshStandardMaterial({color:0x4a3320, roughness:.85}));
+    stallBase.position.set(SHOP_POS.x,0.8,SHOP_POS.z); stallBase.castShadow = true;
+    scene.add(stallBase);
+    const awning = new THREE.Mesh(new THREE.ConeGeometry(2.6,1.4,4), new THREE.MeshStandardMaterial({color:0x6b1f1f, roughness:.8}));
+    awning.position.set(SHOP_POS.x,2.9,SHOP_POS.z); awning.rotation.y = Math.PI/4;
+    scene.add(awning);
+    const stallLight = new THREE.PointLight(0xffcf8a, 1.4, 10, 2);
+    stallLight.position.set(SHOP_POS.x,2.4,SHOP_POS.z);
+    scene.add(stallLight);
+    obstacles.push({x:SHOP_POS.x, z:SHOP_POS.z, radius:2.6});
+  }
+
+  function buildMissionTent(){
+    const canvasMat = new THREE.MeshStandardMaterial({color:0x2c4a6e, roughness:.85});
+    const trimMat = new THREE.MeshStandardMaterial({color:0xd6c8a0, roughness:.8});
+    const poleMat = new THREE.MeshStandardMaterial({color:0x3c2b1c});
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.ConeGeometry(2.8,2.6,4), canvasMat);
+    body.position.y = 1.9; body.rotation.y = Math.PI/4; body.castShadow = true;
+    g.add(body);
+    const skirt = new THREE.Mesh(new THREE.CylinderGeometry(2.85,3.1,.5,4), trimMat);
+    skirt.position.y = 0.7; skirt.rotation.y = Math.PI/4;
+    g.add(skirt);
+    for(let i=0;i<4;i++){
+      const ang = i*Math.PI/2 + Math.PI/4;
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,2.2,6), poleMat);
+      pole.position.set(Math.cos(ang)*2.6, 1.1, Math.sin(ang)*2.6);
+      g.add(pole);
+    }
+    const flagPole = new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,1.0,6), poleMat);
+    flagPole.position.y = 3.7; g.add(flagPole);
+    const flag = new THREE.Mesh(new THREE.PlaneGeometry(.6,.4), new THREE.MeshStandardMaterial({color:0x78aadc, side:THREE.DoubleSide}));
+    flag.position.set(.32,3.9,0); g.add(flag);
+    const cvs=document.createElement('canvas'); cvs.width=640; cvs.height=128; const ctx=cvs.getContext('2d');
+    ctx.fillStyle='#e8dcc8'; ctx.font='bold 40px Cinzel, serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('MISSIONS',320,64);
+    const tex=new THREE.CanvasTexture(cvs);
+    const sign=new THREE.Mesh(new THREE.PlaneGeometry(3.2,.64), new THREE.MeshBasicMaterial({map:tex,transparent:true}));
+    sign.position.set(0,2.5,2.85); g.add(sign);
+    const sign2=sign.clone(); sign2.rotation.y=Math.PI; sign2.position.z=-2.85; g.add(sign2);
+    const tentLight = new THREE.PointLight(0x9ac6ff, 1.2, 10, 2);
+    tentLight.position.set(0,2.4,0); g.add(tentLight);
+    g.position.set(TENT_POS.x, 0, TENT_POS.z);
+    scene.add(g);
+    missionTentGroup = g;
+    obstacles.push({x:TENT_POS.x, z:TENT_POS.z, radius:2.9});
+  }
+
+  function buildWizardTower(){
+    const x=BOSS_TOWER.x,z=BOSS_TOWER.z,h=BOSS_TOWER.height,y0=BOSS_TOWER.baseY;
+    const black=new THREE.MeshStandardMaterial({color:0x0c0c10,roughness:.72,metalness:.2});
+    const darkStone=new THREE.MeshStandardMaterial({color:0x18171d,roughness:.92});
+    const trimStone=new THREE.MeshStandardMaterial({color:0x2c2734,roughness:.82,metalness:.12});
+    // Lower the tower 1 unit and leave a real opening through the foundation.
+    const wallThetaStart = TOWER_DOOR_ANGLE + TOWER_DOOR_GAP/2;
+    const wallThetaLength = Math.PI*2 - TOWER_DOOR_GAP;
+    const baseGeo = new THREE.CylinderGeometry(14.5,17,2.4,20,1,true,wallThetaStart,wallThetaLength);
+    const base=new THREE.Mesh(baseGeo,darkStone);
+    base.position.set(x,y0+1.2,z); base.castShadow=true; base.receiveShadow=true; scene.add(base);
+    // Solid tapering keep wall with the same doorway opening as the foundation.
+    const wallGeo = new THREE.CylinderGeometry(11.4,13.8,h,44,1,true,wallThetaStart,wallThetaLength);
+    const wall = new THREE.Mesh(wallGeo, black);
+    wall.position.set(x,y0+h/2,z); wall.castShadow=true; wall.receiveShadow=true; scene.add(wall);
+    towerWallMesh = wall;
+    // Faint stone banding rings up the shaft break up the height without opening any gaps.
+    for(let i=2;i<6;i++){
+      const ringY = y0 + (h*i/6);
+      const ringR = 11.4 + (13.8-11.4)*(1-i/6) + .12;
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(ringR,.24,6,48,wallThetaLength), trimStone);
+      ring.rotation.x = Math.PI/2; ring.rotation.z = wallThetaStart;
+      ring.position.set(x,ringY,z); scene.add(ring);
+    }
+    // Visible platform floor: previously the tower's wall was a hollow open-ended
+    // cylinder with no cap at the top, so there was nothing solid to actually
+    // stand on except the small stairwell-hole marker below — this is the real
+    // floor, sized to match the full walkable area on top of the tower.
+    const platformFloor = new THREE.Mesh(new THREE.CylinderGeometry(12.3,12.3,0.4,32), darkStone);
+    platformFloor.position.set(x, y0+h-0.2, z); platformFloor.castShadow=true; platformFloor.receiveShadow=true; scene.add(platformFloor);
+    // Low open parapet around the edge gives the rooftop a finished silhouette
+    // from outside without capping the arena — the platform stays open to the
+    // sky so the flying wizard boss is always visible during the fight.
+    const parapet = new THREE.Mesh(new THREE.CylinderGeometry(12.3,12.5,0.9,32,1,true), darkStone);
+    parapet.position.set(x, y0+h+0.45, z); parapet.castShadow=true; parapet.receiveShadow=true; scene.add(parapet);
+    // Opening in the platform floor at the top of the spiral stairs. The black inset
+    // reads as a real hole and sits flush with the platform, directly over the
+    // staircase endpoint, so the player can see where they climbed up from.
+    const stairTopA=TOWER_DOOR_ANGLE + (TOWER_STAIR_TURNS*Math.PI*2);
+    const holeX=x+Math.cos(stairTopA)*TOWER_STAIR_RADIUS;
+    const holeZ=z+Math.sin(stairTopA)*TOWER_STAIR_RADIUS;
+    const roofHole=new THREE.Mesh(
+      new THREE.CylinderGeometry(2.15,2.15,.08,24),
+      new THREE.MeshBasicMaterial({color:0x020107,side:THREE.DoubleSide})
+    );
+    roofHole.position.set(holeX,y0+h+0.06,holeZ); scene.add(roofHole);
+    const roofHoleRim=new THREE.Mesh(
+      new THREE.TorusGeometry(2.15,.13,8,28),
+      trimStone
+    );
+    roofHoleRim.rotation.x=Math.PI/2;
+    roofHoleRim.position.set(holeX,y0+h+0.1,holeZ); roofHoleRim.castShadow=true; scene.add(roofHoleRim);
+
+
+    // Distinctive exterior entrance: no bulky rim, with a recessed arcane double door.
+    const doorMat=new THREE.MeshStandardMaterial({color:0x11101a,roughness:.58,metalness:.42});
+    const doorPanelMat=new THREE.MeshStandardMaterial({color:0x282238,roughness:.5,metalness:.5});
+    const doorGlowMat=new THREE.MeshBasicMaterial({color:0xb98cff});
+    const doorway=new THREE.Mesh(new THREE.BoxGeometry(4.8,6.0,.30),doorMat);
+    doorway.position.set(x,y0+3.0,z-13.02); doorway.castShadow=true; doorway.receiveShadow=true; scene.add(doorway);
+    // Split door leaves with a visible center seam and raised panels.
+    [-1.18,1.18].forEach(dx=>{
+      const panel=new THREE.Mesh(new THREE.BoxGeometry(2.18,5.15,.16),doorPanelMat);
+      panel.position.set(x+dx,y0+2.8,z-13.28); panel.castShadow=true; scene.add(panel);
+      const rune=new THREE.Mesh(new THREE.TorusGeometry(.72,.055,6,16),doorGlowMat);
+      rune.position.set(x+dx,y0+3.0,z-13.39); rune.rotation.x=Math.PI/2; scene.add(rune);
+    });
+    const doorFrameMat=new THREE.MeshStandardMaterial({color:0x4a3d61,roughness:.62,metalness:.38});
+    [-2.7,2.7].forEach(dx=>{
+      const jamb=new THREE.Mesh(new THREE.BoxGeometry(.42,5.8,.72),doorFrameMat);
+      jamb.position.set(x+dx,y0+2.9,z-12.82); jamb.castShadow=true; jamb.receiveShadow=true; scene.add(jamb);
+    });
+    // Clean arched frame: use a half-ring aligned directly with the exterior face.
+    // No sideways torus/horn geometry.
+    const arch=new THREE.Mesh(new THREE.TorusGeometry(2.65,.16,7,32,Math.PI),doorFrameMat);
+    arch.rotation.x=Math.PI/2;
+    arch.position.set(x,y0+5.65,z-13.02); arch.castShadow=true; scene.add(arch);
+    // Entrance floor is completely flush — no lower rim or threshold.
+    const doorGlow=new THREE.PointLight(0x7b2cff,2.0,16,2);
+    doorGlow.position.set(x,y0+2.6,z-14.0); scene.add(doorGlow);
+    const doorSign=new THREE.Mesh(new THREE.BoxGeometry(2.9,.10,.05),new THREE.MeshBasicMaterial({color:0xd5b8ff}));
+    doorSign.position.set(x,y0+5.55,z-13.25); scene.add(doorSign);
+
+    const light=new THREE.PointLight(0x3b1cff,2.6,50,2); light.position.set(x,y0+h*0.5,z); scene.add(light);
+    // A shimmering ward seals the top platform until every mission has been fulfilled.
+    const wardTex=(()=>{ const cvs=document.createElement('canvas'); cvs.width=256; cvs.height=256; const ctx=cvs.getContext('2d');
+      const grad=ctx.createRadialGradient(128,128,10,128,128,128); grad.addColorStop(0,'rgba(200,150,255,.55)'); grad.addColorStop(.7,'rgba(120,60,220,.35)'); grad.addColorStop(1,'rgba(80,20,180,0)');
+      ctx.fillStyle=grad; ctx.fillRect(0,0,256,256); return new THREE.CanvasTexture(cvs); })();
+    const ward=new THREE.Mesh(new THREE.CircleGeometry(10.4,32), new THREE.MeshBasicMaterial({map:wardTex,transparent:true,side:THREE.DoubleSide,depthWrite:false}));
+    ward.rotation.x=-Math.PI/2; ward.position.set(x,y0+h+2.0,z);
+    scene.add(ward);
+    towerWard = ward;
+    obstacles.push({kind:'wizardTowerWall', x, z, radius:12.6});
+    // Wide spiral staircase begins just above the lowered foundation and reaches the roof.
+    const stairCount=170, stairHeight=(h-1.2)/stairCount;
+    for(let i=0;i<stairCount;i++){
+      const a=TOWER_DOOR_ANGLE + (i/stairCount)*(Math.PI*2*TOWER_STAIR_TURNS);
+      const y=y0+1.2 + i*stairHeight;
+      const step=new THREE.Mesh(new THREE.BoxGeometry(4.2,.42,2.45),darkStone);
+      step.position.set(x+Math.cos(a)*TOWER_STAIR_RADIUS,y,z+Math.sin(a)*TOWER_STAIR_RADIUS);
+      step.rotation.y=-a+Math.PI/2;
+      step.castShadow=true; step.receiveShadow=true; scene.add(step);
+    }
+    BOSS_TOWER.topY=y0+h;
+  }
+  function buildVillageGuardTower(village){
+    const woodMat = new THREE.MeshStandardMaterial({color:0x4a3320, roughness:.9});
+    const stoneMat = new THREE.MeshStandardMaterial({color:0x57514a, roughness:1});
+    const positions = village.fortified
+      ? [[village.x-village.halfSize+5,village.z-village.halfSize+5],[village.x+village.halfSize-5,village.z-village.halfSize+5],[village.x-village.halfSize+5,village.z+village.halfSize-5],[village.x+village.halfSize-5,village.z+village.halfSize-5]]
+      : [[village.x+village.halfSize-4,village.z-village.halfSize+4]];
+    village.towerPositions = positions;
+    positions.forEach(([x,z])=>{
+      const tower = new THREE.Group();
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(2.8,3.2,1.3,8), stoneMat); base.position.y=.65; tower.add(base);
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(2.1,2.45,7.5,8), woodMat); shaft.position.y=4.4; tower.add(shaft);
+      const platform = new THREE.Mesh(new THREE.CylinderGeometry(3,3,.45,8), woodMat); platform.position.y=8.1; tower.add(platform);
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(3.4,2.1,8), new THREE.MeshStandardMaterial({color:0x6b1f1f,roughness:.9})); roof.position.y=10; tower.add(roof);
+      [[-2.1,-2.1],[2.1,-2.1],[-2.1,2.1],[2.1,2.1]].forEach(([dx,dz])=>{ const post=new THREE.Mesh(new THREE.BoxGeometry(.22,1.8,.22),woodMat); post.position.set(dx,8.95,dz); tower.add(post); });
+      const fire=new THREE.PointLight(0xff9a4a,1.8,18,2); fire.position.set(0,8.8,0); tower.add(fire);
+      tower.position.set(x,0,z); scene.add(tower); obstacles.push({x,z,radius:3.2});
+    });
+    if(!village.fortified){ village.towerX=positions[0][0]; village.towerZ=positions[0][1]; }
+  }
+
+  function buildVillageWardenAltar(village){
+    const x=village.x, z=village.z+village.halfSize-5;
+    const altar=new THREE.Mesh(new THREE.BoxGeometry(4.4,.8,2.8),new THREE.MeshStandardMaterial({color:0x3a3028,roughness:.95})); altar.position.set(x,.4,z); scene.add(altar);
+    const pole=new THREE.Mesh(new THREE.BoxGeometry(.12,3.8,.12),new THREE.MeshStandardMaterial({color:0x2b2926})); pole.position.set(x,2.0,z); scene.add(pole);
+    const banner=new THREE.Mesh(new THREE.BoxGeometry(2.1,2.7,.08),new THREE.MeshStandardMaterial({color:0x7a1f1f,roughness:.9})); banner.position.set(x,2.6,z); scene.add(banner);
+  }
+
+  function buildVillage(village){
+    const cx=village.x, cz=village.z, hs=village.halfSize;
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(hs*2.2,hs*2.2),new THREE.MeshStandardMaterial({color:0x675b49,roughness:1})); floor.rotation.x=-Math.PI/2; floor.position.set(cx,0.035,cz); floor.receiveShadow=true; scene.add(floor);
+    const square=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.MeshStandardMaterial({color:0x75654e,roughness:1})); square.rotation.x=-Math.PI/2; square.position.set(cx,0.055,cz); scene.add(square);
+    const houseSpots=[[-12,-10],[12,-10],[-13,10],[13,10],[-2,-16],[2,16]];
+    houseSpots.forEach(([dx,dz],idx)=>{
+      const w=7.5+Math.random()*2.2,d=6.5+Math.random()*2.2,h=5.5+Math.random()*2.5,g=new THREE.Group();
+      const body=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color:buildingPalette[(idx+2)%buildingPalette.length],roughness:.92})); body.position.y=h/2; body.castShadow=true; body.receiveShadow=true; g.add(body);
+      const roof=new THREE.Mesh(new THREE.ConeGeometry(Math.max(w,d)*.72,2.2,4),new THREE.MeshStandardMaterial({color:idx%2?0x4d3427:0x583c2a,roughness:.9})); roof.position.y=h+1; roof.rotation.y=Math.PI/4; g.add(roof);
+      const door=new THREE.Mesh(new THREE.BoxGeometry(1.25,2.2,.1),new THREE.MeshStandardMaterial({color:0x2e2013,roughness:.85})); door.position.set(0,1.1,d/2+.06); g.add(door);
+      g.position.set(cx+dx,0,cz+dz); scene.add(g); obstacles.push({x:cx+dx,z:cz+dz,radius:Math.sqrt((w/2)**2+(d/2)**2)+.4});
+    });
+    buildWell(cx,cz); buildLampPost(cx-hs+3,cz-hs+3); buildLampPost(cx+hs-3,cz+hs-3);
+    if(village.fortified){
+      const wallMat=new THREE.MeshStandardMaterial({color:0x67635d,roughness:1});
+      const wallH=2.8, wallT=1.4, gap=12;
+      const wallSeg=(horizontal, sign, span)=>{
+        if(horizontal){
+          const sideZ=cz+sign*hs; const leftW=(span-gap)/2; const rightW=leftW;
+          const a=new THREE.Mesh(new THREE.BoxGeometry(leftW,wallH,wallT),wallMat); a.position.set(cx-(gap/2+leftW/2),wallH/2,sideZ); scene.add(a);
+          const b=new THREE.Mesh(new THREE.BoxGeometry(rightW,wallH,wallT),wallMat); b.position.set(cx+(gap/2+rightW/2),wallH/2,sideZ); scene.add(b);
+        } else {
+          const sideX=cx+sign*hs; const len=span;
+          const wall=new THREE.Mesh(new THREE.BoxGeometry(wallT,wallH,len),wallMat); wall.position.set(sideX,wallH/2,cz); scene.add(wall);
+        }
+      };
+      wallSeg(true,-1,hs*2); wallSeg(true,1,hs*2);
+      const sideL=new THREE.Mesh(new THREE.BoxGeometry(wallT,wallH,hs*2),wallMat); sideL.position.set(cx-hs,wallH/2,cz); scene.add(sideL);
+      const sideR=new THREE.Mesh(new THREE.BoxGeometry(wallT,wallH,hs*2),wallMat); sideR.position.set(cx+hs,wallH/2,cz); scene.add(sideR);
+      const gateL=new THREE.Mesh(new THREE.BoxGeometry(.8,4.8,.8),new THREE.MeshStandardMaterial({color:0x3b291a})); gateL.position.set(cx-gap/2,2.4,cz-hs); scene.add(gateL);
+      const gateR=gateL.clone(); gateR.position.x=cx+gap/2; scene.add(gateR);
+      const lintel=new THREE.Mesh(new THREE.BoxGeometry(gap+.9,.8,.9),new THREE.MeshStandardMaterial({color:0x3b291a})); lintel.position.set(cx,4.6,cz-hs); scene.add(lintel);
+      village.entranceX=cx; village.entranceZ=cz-hs;
+    } else {
+      const fenceMat=new THREE.MeshStandardMaterial({color:0x4a3320,roughness:.9});
+      [[0,-hs],[0,hs],[-hs,0],[hs,0]].forEach(([dx,dz],idx)=>{ const horizontal=idx<2; const fence=new THREE.Mesh(new THREE.BoxGeometry(horizontal?hs*2:.25,1.1,horizontal?.25:hs*2),fenceMat); fence.position.set(cx+dx,.55,cz+dz); scene.add(fence); });
+    }
+  }
+
+  function villagePos(village){
+    for(let tries=0;tries<30;tries++){
+      const x=village.x+(Math.random()*2-1)*(village.halfSize-5), z=village.z+(Math.random()*2-1)*(village.halfSize-5);
+      let ok=true;
+      for(const o of obstacles){ if(o.kind==='waterWall') continue; if(Math.hypot(x-o.x,z-o.z)<o.radius+1.2){ ok=false; break; } }
+      if(ok) return {x,z};
+    }
+    return {x:village.x,z:village.z+7};
+  }
+
+  function spawnVillageVillager(village){
+    const pos=villagePos(village); const mesh=makeVillagerCiv();
+    const toughChance = village.fortified ? 0.38 : 0.22; const tough=Math.random()<toughChance; const maxHp=tough?(190+Math.floor(Math.random()*71)):100;
+    if(tough){ mesh.scale.set(1.08,1.08,1.08); }
+    mesh.position.set(pos.x,0,pos.z); mesh.rotation.y=Math.random()*Math.PI*2; scene.add(mesh);
+    villagers.push({mesh,isGuard:false,isVillageVillager:true,isOutskirtVillager:true,villageId:village.id,tough,hp:maxHp,maxHp,state:'wander',home:new THREE.Vector3(pos.x,0,pos.z),target:new THREE.Vector3(pos.x,0,pos.z),wanderTimer:Math.random()*3,calmTimer:0,dead:false,fallProgress:0,plazaBias:0});
+  }
+
+  function spawnVillageGuard(village){
+    const type='spear',gt=GUARD_TYPES[type],levelMult=1+(village.guardLevel-1)*.12;
+    const idx=villagers.filter(v=>v.isGuard&&v.villageId===village.id&&!v.dead&&!v.isTowerArcher&&!v.isWarden).length;
+    const count=Math.max(1,village.guardCount);
+    const ang=(idx/count)*Math.PI*2 + Math.PI/4;
+    const ring=Math.min(18, Math.max(10, village.halfSize*.42));
+    const x=village.x+Math.cos(ang)*ring, z=village.z+Math.sin(ang)*ring;
+    const mesh=makeGuard(type); mesh.position.set(x,0,z); scene.add(mesh);
+    villagers.push({mesh,isGuard:true,villageId:village.id,isVillageGuard:true,isOutskirtGuard:true,type,hp:Math.round(BASE_GUARD_HP*gt.hpMult*levelMult),maxHp:Math.round(BASE_GUARD_HP*gt.hpMult*levelMult),dmgRange:[BASE_GUARD_DMG[0]*gt.dmgMult*levelMult,BASE_GUARD_DMG[1]*gt.dmgMult*levelMult],speed:BASE_GUARD_SPEED*gt.speedMult,range:gt.range,ranged:gt.ranged,stationary:true,atkCooldownBase:gt.atkCooldown,attackTimer:Math.random()*.5,state:'guard',dead:false,fallProgress:0});
+  }
+
+  function spawnVillageTowerArcher(village){
+    const type='archer',gt=GUARD_TYPES[type],levelMult=1+(village.guardLevel-1)*.12;
+    const positions=village.towerPositions || [[village.towerX||village.x+village.halfSize-4,village.towerZ||village.z-village.halfSize+4]];
+    const existing=villagers.filter(v=>v.isTowerArcher&&v.villageId===village.id&&!v.dead).length;
+    for(let i=existing;i<positions.length;i++){
+      const [x,z]=positions[i]; const mesh=makeGuard(type); mesh.position.set(x,8.8,z); scene.add(mesh);
+      villagers.push({mesh,isGuard:true,isOutskirtGuard:true,isVillageGuard:true,isTowerArcher:true,villageId:village.id,towerIndex:i,type,hp:Math.round(BASE_GUARD_HP*gt.hpMult*levelMult),maxHp:Math.round(BASE_GUARD_HP*gt.hpMult*levelMult),dmgRange:[BASE_GUARD_DMG[0]*gt.dmgMult*levelMult,BASE_GUARD_DMG[1]*gt.dmgMult*levelMult],speed:0,range:village.fortified?56:48,ranged:true,stationary:true,atkCooldownBase:gt.atkCooldown,attackTimer:Math.random()*.5,state:'guard',dead:false,fallProgress:0});
+    }
+  }
+
+  function ensureVillageTowerArcher(village){ if(village.guardCount<=0) return; spawnVillageTowerArcher(village); }
+
+  function spawnVillageWarden(village){
+    if(village.guardCount<=0 || village.bossInterval<=0) return;
+    if(villagers.some(v=>v.isWarden&&v.villageId===village.id&&!v.dead)) return;
+    const mesh=makeGuard('berserker'); mesh.scale.multiplyScalar(1.25); mesh.position.set(village.x,0,village.z+7); scene.add(mesh);
+    villagers.push({mesh,isGuard:true,isWarden:true,isOutskirtGuard:true,villageId:village.id,type:'warden',hp:420,maxHp:420,dmgRange:[18,28],speed:5.8,range:2.8,ranged:false,stationary:false,atkCooldownBase:1.15,attackTimer:.2,state:'attack',dead:false,fallProgress:0});
+    showBanner(`${village.name.toUpperCase()} WARDEN HAS ARRIVED`); sfx('alert');
+  }
+  function ensureVillageGuards(village){
+    if(village.guardCount<=0) return;
+    const alive=villagers.filter(v=>v.isGuard&&v.villageId===village.id&&!v.dead&&!v.isTowerArcher&&!v.isWarden).length;
+    for(let i=alive;i<village.guardCount;i++) spawnVillageGuard(village);
+    ensureVillageTowerArcher(village);
+  }
+  function alertVillage(villageId){
+    const village=VILLAGES.find(v=>v.id===villageId);
+    if(!village || village.guardCount<=0) return;
+    const t=villageTimers[villageId]; t.alerted=true;
+    villagers.forEach(v=>{ if(v.villageId!==villageId || !v.isOutskirtGuard || v.dead) return; v.state='attack'; v.attackTimer=Math.random()*.2; });
+    if(village) showBanner(`${village.name.toUpperCase()} GUARDS ALERTED`);
+  }
+
+  function buildVillageDirectionSigns(){
+    const signMat=new THREE.MeshStandardMaterial({color:0x4a321f,roughness:.9}),postMat=new THREE.MeshStandardMaterial({color:0x3a2819,roughness:.95});
+    VILLAGES.forEach((village,vi)=>{
+      const steps=1;
+      for(let i=1;i<=steps;i++){
+        const t=i/(steps+1), x=village.x*t, z=village.z*t;
+        const g=new THREE.Group(),post=new THREE.Mesh(new THREE.BoxGeometry(.16,2.8,.16),postMat); post.position.y=1.4; g.add(post);
+        const board=new THREE.Mesh(new THREE.BoxGeometry(5.0,1.05,.14),signMat); board.position.set(0,2.45,0); g.add(board);
+        const arrow=new THREE.Mesh(new THREE.ConeGeometry(.22,.7,4),signMat); arrow.rotation.z=Math.PI/2; arrow.position.set(2.05,2.45,0); g.add(arrow);
+        const cvs=document.createElement('canvas'); cvs.width=640; cvs.height=128; const ctx=cvs.getContext('2d'); ctx.fillStyle='#efe0c2'; ctx.font='bold 32px Cinzel, serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(village.name,320,64);
+        const tex=new THREE.CanvasTexture(cvs); const text=new THREE.Mesh(new THREE.PlaneGeometry(4.7,.82),new THREE.MeshBasicMaterial({map:tex,transparent:true})); text.position.set(0,2.45,-.08); text.rotation.y=Math.PI; g.add(text);
+        g.position.set(x,0,z); g.rotation.y=Math.atan2(village.x,village.z); scene.add(g);
+      }
+      const g=new THREE.Group(); const postL=new THREE.Mesh(new THREE.BoxGeometry(.2,3.2,.2),postMat),postR=postL.clone(); postL.position.set(-2.5,1.6,0); postR.position.set(2.5,1.6,0); g.add(postL,postR);
+      const board=new THREE.Mesh(new THREE.BoxGeometry(5.8,1.35,.16),signMat); board.position.y=2.65; g.add(board);
+      const cvs=document.createElement('canvas'); cvs.width=760; cvs.height=180; const ctx=cvs.getContext('2d'); ctx.fillStyle='#efe0c2'; ctx.font='bold 40px Cinzel, serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(village.name.toUpperCase(),380,80); ctx.font='bold 24px Cinzel, serif'; ctx.fillText(village.guardCount>0 ? 'WARDEN\'S TERRITORY' : 'PEACEFUL VILLAGE',380,128);
+      const tex=new THREE.CanvasTexture(cvs); const text=new THREE.Mesh(new THREE.PlaneGeometry(5.35,1.15),new THREE.MeshBasicMaterial({map:tex,transparent:true})); text.position.set(0,2.65,-.09); text.rotation.y=Math.PI; g.add(text);
+      g.position.set(village.x,0,village.z-village.halfSize-3); scene.add(g);
+    });
+  }
+
+  function randomStreetPos(nearX, nearZ, minR, maxR){
+    for(let tries=0;tries<24;tries++){
+      let x,z;
+      if(nearX===undefined){
+        if(Math.random() < 0.25){
+          const ang=Math.random()*Math.PI*2, rad=Math.random()*(PLAZA_HALF+45);
+          x = MARKET_POS.x + Math.cos(ang)*rad; z = MARKET_POS.z + Math.sin(ang)*rad;
+        } else {
+          x=(Math.random()*2-1)*CITY_EXTENT; z=(Math.random()*2-1)*CITY_EXTENT;
+        }
+      }
+      else { const ang=Math.random()*Math.PI*2, rad=minR+Math.random()*(maxR-minR); x=nearX+Math.cos(ang)*rad; z=nearZ+Math.sin(ang)*rad; }
+      let ok = Math.abs(x)<CITY_EXTENT && Math.abs(z)<CITY_EXTENT;
+      if(ok){
+        if(x > WATER_WALL_X-1.0) ok=false;
+        for(const o of obstacles){
+          if(o.kind==='waterWall') continue;
+          if(Math.hypot(x-o.x,z-o.z) < o.radius+1.2){ ok=false; break; }
+        }
+      }
+      if(ok) return {x,z};
+    }
+    return {x:0, z:16};
+  }
+
+  // ================= AUDIO =================
+  let actx;
+  function sfx(type){
+    try{
+      if(!actx) actx = new (window.AudioContext||window.webkitAudioContext)();
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.connect(g); g.connect(actx.destination);
+      const t = actx.currentTime;
+      if(type==='swing'){ o.type='sawtooth'; o.frequency.setValueAtTime(180,t); o.frequency.exponentialRampToValueAtTime(60,t+.15); g.gain.setValueAtTime(.12,t); g.gain.exponentialRampToValueAtTime(.001,t+.16); }
+      else if(type==='hit'){ o.type='square'; o.frequency.setValueAtTime(90,t); g.gain.setValueAtTime(.22,t); g.gain.exponentialRampToValueAtTime(.001,t+.12); }
+      else if(type==='coin'){ o.type='sine'; o.frequency.setValueAtTime(880,t); o.frequency.exponentialRampToValueAtTime(1400,t+.08); g.gain.setValueAtTime(.15,t); g.gain.exponentialRampToValueAtTime(.001,t+.12); }
+      else if(type==='hurt'){ o.type='sawtooth'; o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(40,t+.2); g.gain.setValueAtTime(.2,t); g.gain.exponentialRampToValueAtTime(.001,t+.22); }
+      else if(type==='bow'){ o.type='triangle'; o.frequency.setValueAtTime(320,t); o.frequency.exponentialRampToValueAtTime(700,t+.06); g.gain.setValueAtTime(.16,t); g.gain.exponentialRampToValueAtTime(.001,t+.14); }
+      else if(type==='armor'){ o.type='square'; o.frequency.setValueAtTime(500,t); o.frequency.exponentialRampToValueAtTime(220,t+.1); g.gain.setValueAtTime(.18,t); g.gain.exponentialRampToValueAtTime(.001,t+.15); }
+      else if(type==='alert'){ o.type='sawtooth'; o.frequency.setValueAtTime(220,t); o.frequency.exponentialRampToValueAtTime(440,t+.25); g.gain.setValueAtTime(.18,t); g.gain.exponentialRampToValueAtTime(.001,t+.3); }
+      o.start(t); o.stop(t+.3);
+    }catch(e){}
+  }
+
+  // ================= INPUT =================
+  const keys = {};
+  let yaw = 0, pitch = 0;
+  let locked = false;
+  let intentionalUnlock = false;
+  const canvas = renderer.domElement;
+  canvas.addEventListener('contextmenu', e=> e.preventDefault());
+  function requestMouseLock(){
+    if((phase!=='play' && phase!=='ready') || P.dead || document.pointerLockElement===canvas) return false;
+    try{
+      const result = canvas.requestPointerLock();
+      if(result && typeof result.catch==='function') result.catch(()=>{});
+      return true;
+    }catch(e){
+      console.warn('Pointer lock request failed:', e);
+      return false;
+    }
+  }
+
+  canvas.addEventListener('mousedown', ()=>{
+    if(!locked) requestMouseLock();
+  });
+
+  document.addEventListener('pointerlockchange', ()=>{
+    locked = document.pointerLockElement === canvas;
+    document.body.style.cursor = locked ? 'none' : '';
+    document.getElementById('hint').style.display = locked ? 'block':'none';
+    if(!locked){
+      isDrawing=false; drawTime=0;
+      targetCameraFov = CAMERA_DEFAULT_FOV;
+      document.getElementById('drawBar').style.display='none';
+      if(phase==='play' && !P.dead && !intentionalUnlock){
+        phase='paused';
+        renderPaused();
+      }
+      return;
+    }
+    if(phase==='ready'){
+      phase='play';
+      overlay.style.display='none';
+      document.getElementById('hud').style.display='block';
+      showBanner('CITY LOADED — WELCOME');
+    } else if(phase==='play' && !P.dead){
+      overlay.style.display='none';
+      document.getElementById('hud').style.display='block';
+    }
+    intentionalUnlock = false;
+  });
+
+  document.addEventListener('pointerlockerror', ()=>{
+    locked = false;
+    document.body.style.cursor = '';
+    if(phase==='ready'){
+      renderReady();
+    } else if(phase==='play' && !P.dead){
+      phase='paused';
+      renderPaused();
+      showBanner('CLICK RESUME TO LOCK THE MOUSE');
+    }
+  });
+
+  document.addEventListener('mousemove', (e)=>{
+    if(phase!=='play' || P.dead) return;
+    // Use pointer-lock deltas when locked; otherwise keep a usable fallback.
+    const dx = locked ? e.movementX : (e.clientX - (window.__lastMouseX ?? e.clientX));
+    const dy = locked ? e.movementY : (e.clientY - (window.__lastMouseY ?? e.clientY));
+    window.__lastMouseX = e.clientX; window.__lastMouseY = e.clientY;
+    yaw -= dx * 0.0044;
+    pitch -= dy * 0.0044;
+    pitch = Math.max(-1.3, Math.min(1.3, pitch));
+  });
+  window.addEventListener('keydown', e=>{
+    keys[e.code]=true;
+    if(e.code==='Space' && phase==='play' && !P.dead){ e.preventDefault(); toggleWeaponMode(); }
+    if(e.code==='KeyE' && phase==='play' && !P.dead && nearShop){ openShop(); }
+    if(e.code==='KeyE' && phase==='play' && !P.dead && !nearShop && nearTent){ openMissions(); }
+    if(e.code==='KeyH' && phase==='play' && !P.dead && horseOwned){ if(horseMounted) dismountHorse(); else mountHorse(); }
+  });
+  window.addEventListener('keyup', e=> keys[e.code]=false);
+  window.addEventListener('blur', ()=>{ for(const k in keys) delete keys[k]; });
+  canvas.addEventListener('mousedown', e=>{
+    if(phase!=='play' || P.dead) return;
+    if(!locked) requestMouseLock();
+    if(weaponMode==='bow') startDraw(); else attack();
+  });
+  canvas.addEventListener('mouseup', e=>{
+    if(weaponMode==='bow') releaseDraw();
+  });
+  window.addEventListener('mouseup', ()=>{
+    if(isDrawing) releaseDraw();
+  });
+
+  // ================= PLAYER STATE =================
+  const P = { health:100, maxHealth:100, stamina:100, maxStamina:100, armor:0, maxArmor:0, kills:0, lastHitTime:-999, dead:false };
+  let phase = 'start';
+  let currentWeapon = WEAPONS[0];
+  let currentBow = null;
+  let weaponMode = 'melee';
+  let swinging=false, swingTimer=0, swingCooldown=0, hitRegistered=false;
+  let isDrawing=false, drawTime=0, bowCooldown=0;
+  let nearShop = false;
+  let nearTent = false;
+  let alertLevel = 0;
+  let peaceTimer = 0;
+
+  function equipWeapon(id){
+    const w = WEAPONS.find(w=>w.id===id);
+    if(!w || !ownedWeapons.has(id)) return;
+    if(w.type==='melee'){
+      equippedWeaponId = id; currentWeapon = w; applySwordVisual(w);
+      document.getElementById('weaponPill').textContent = '🗡️ '+w.name;
+    } else {
+      equippedBowId = id; currentBow = w; applyBowVisual(w);
+      const bp = document.getElementById('bowPill');
+      bp.style.display='inline-block'; bp.textContent = '🏹 '+w.name;
+    }
+    updateWeaponModeVisuals();
+  }
+  function equipArmor(id){
+    const a = ARMORS.find(a=>a.id===id);
+    if(!a || !ownedArmor.has(id)) return;
+    equippedArmorId = id; currentArmor = a;
+    P.maxArmor = a.armorHp; P.armor = P.maxArmor;
+    disguiseBrokenUntil = 0;
+  }
+  function toggleWeaponMode(){
+    if(!equippedBowId){ showBanner('NO BOW OWNED — VISIT THE SHOP'); return; }
+    if(isDrawing){ isDrawing=false; drawTime=0; stringGroup.position.z=0; document.getElementById('drawBar').style.display='none'; }
+    targetCameraFov = CAMERA_DEFAULT_FOV;
+    weaponMode = weaponMode==='melee' ? 'bow' : 'melee';
+    updateWeaponModeVisuals();
+  }
+  function updateWeaponModeVisuals(){
+    sword.visible = weaponMode==='melee';
+    bowGroup.visible = weaponMode==='bow' && !!equippedBowId;
+    const wp = document.getElementById('weaponPill'), bp = document.getElementById('bowPill');
+    if(wp) wp.style.opacity = weaponMode==='melee' ? '1' : '0.45';
+    if(bp) bp.style.opacity = weaponMode==='bow' ? '1' : '0.45';
+  }
+
+  function attack(){
+    if(swinging || swingCooldown>0 || P.dead) return;
+    swinging=true; swingTimer=0; hitRegistered=false; swingCooldown=currentWeapon.cooldown;
+    sfx('swing');
+  }
+  function startDraw(){
+    if(P.dead || phase!=='play' || !equippedBowId || bowCooldown>0 || isDrawing) return;
+    isDrawing = true; drawTime = 0;
+    targetCameraFov = BOW_AIM_FOV;
+    document.getElementById('drawBar').style.display='block';
+  }
+  function releaseDraw(){
+    if(!isDrawing) return;
+    isDrawing = false;
+    targetCameraFov = CAMERA_DEFAULT_FOV;
+    document.getElementById('drawBar').style.display='none';
+    const frac = Math.min(1, drawTime/currentBow.drawTime);
+    bowCooldown = currentBow.cooldown;
+    stringGroup.position.z = 0;
+    if(frac < 0.12) return;
+    fireBow(frac);
+  }
+  function fireBow(frac){
+    const camPos = new THREE.Vector3(); camera.getWorldPosition(camPos);
+    const camFwd = new THREE.Vector3(); camera.getWorldDirection(camFwd).normalize();
+    if(!currentBow) return;
+
+    // Use a forgiving ray-to-target test instead of a tiny angular cone.
+    // This makes the center crosshair authoritative for bow aiming.
+    let best=null, bestDist=Infinity;
+    const HIT_RADIUS = 1.65;
+
+    function considerTarget(target, aimPos){
+      if(!target || target.dead) return;
+      const toTarget = aimPos.clone().sub(camPos);
+      const along = toTarget.dot(camFwd);
+      if(along < 0 || along > currentBow.range) return;
+      const closest = camPos.clone().add(camFwd.clone().multiplyScalar(along));
+      const miss = aimPos.distanceTo(closest);
+      if(miss <= HIT_RADIUS && along < bestDist){
+        if(towerBlocksSight(camPos, aimPos)) return;
+        best = target;
+        bestDist = along;
+      }
+    }
+
+    if(wizardActive && wizardBoss && !wizardBoss.dead){
+      const bp = wizardBoss.mesh.position.clone();
+      bp.y += 1.15;
+      considerTarget(wizardBoss, bp);
+    }
+
+    villagers.forEach(v=>{
+      if(v.dead) return;
+      const vp = v.mesh.position.clone();
+      vp.y += v.isTowerArcher ? 1.2 : 1.0;
+      considerTarget(v, vp);
+    });
+
+    const dmg = currentBow.dmg[0] + frac*(currentBow.dmg[1]-currentBow.dmg[0]);
+    const origin = camPos.clone().add(camFwd.clone().multiplyScalar(0.4)).add(new THREE.Vector3(0,-0.12,0));
+    let hitPoint;
+
+    if(best){
+      hitPoint = best.mesh.position.clone();
+      hitPoint.y += best.isTowerArcher ? 1.2 : 1.0;
+
+      // Damage is applied at the exact moment the shot is released.
+      // The arrow/fireball is then only the visual projectile.
+      if(best.isWizardBoss) registerWizardHit(dmg);
+      else registerHit(best, dmg);
+      flashCrosshair();
+      sfx('hit');
+    } else {
+      hitPoint = camPos.clone().add(camFwd.clone().multiplyScalar(currentBow.range));
+    }
+
+    if(currentBow.fireball) spawnFlameBall(origin, hitPoint, null, 0);
+    else spawnArrowProjectile(origin, hitPoint, 0x6b4a2f, null, 0);
+    sfx('bow');
+  }
+  function doHitCheck(){
+    const camPos = new THREE.Vector3(); camera.getWorldPosition(camPos);
+    const camFwd = new THREE.Vector3(); camera.getWorldDirection(camFwd);
+    const arcCos = Math.cos(THREE.MathUtils.degToRad(currentWeapon.arc));
+    let hitAny=false;
+    villagers.forEach(v=>{
+      if(v.dead) return;
+      const vp = v.mesh.position.clone(); vp.y += 1.0;
+      const toV = vp.clone().sub(camPos);
+      const dist = toV.length();
+      if(dist > currentWeapon.range) return;
+      toV.normalize();
+      if(toV.dot(camFwd) < arcCos) return;
+      hitAny = true;
+      const dmg = currentWeapon.dmg[0] + Math.random()*(currentWeapon.dmg[1]-currentWeapon.dmg[0]);
+      registerHit(v, dmg);
+    });
+    if(hitAny){ sfx('hit'); flashCrosshair(); }
+  }
+  function updateBossHealthHUD(){
+    const wrap = document.getElementById('bossHealthWrap');
+    if(!wrap) return;
+    if(wizardActive && wizardBoss && !wizardBoss.dead){
+      wrap.style.display='block';
+      const fill = document.getElementById('bossHealthFill');
+      if(fill) fill.style.width = Math.max(0,Math.min(100,wizardBoss.hp/wizardBoss.maxHp*100))+'%';
+    } else {
+      wrap.style.display='none';
+    }
+  }
+  function registerWizardHit(dmg){
+    if(!wizardBoss || wizardBoss.dead) return;
+    if(!wizardVulnerable) return;
+    wizardBoss.hp -= dmg;
+    burst(wizardBoss.mesh.position.clone(), 0x7b2cff, 14);
+    wizardVulnerable = false;
+    wizardVulnerableTimer = 0;
+    wizardShotTimer = 5;
+    showBanner('WIZARD HIT — DODGE THE NEXT SHOT');
+    if(wizardBoss.hp <= 0){
+      wizardBoss.dead = true;
+      wizardActive = false;
+      wizardDefeated = true;
+      P.kills++;
+      document.getElementById('killCount').textContent = P.kills;
+      burst(wizardBoss.mesh.position.clone(), 0xff4a12, 45);
+      scene.remove(wizardBoss.mesh);
+      wizardBoss = null;
+      showBanner('THE EVIL WIZARD KING HAS FALLEN');
+      sfx('alert');
+      triggerEnding();
+    }
+    updateBossHealthHUD();
+  }
+
+  // ================= ENDING SEQUENCE =================
+  function makeKingMesh(){
+    // Built from the same box-primitive style/dimensions as the gameplay
+    // villager and guard sprites, so the crowned player matches their look.
+    const g = new THREE.Group();
+    const bodyMat = new THREE.MeshStandardMaterial({color:0x8a1f1f, roughness:.6});
+    const body = new THREE.Mesh(new THREE.BoxGeometry(.62,1.05,.4), bodyMat);
+    body.position.y = 1.0; body.castShadow = true; g.add(body);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(.42,.42,.42), new THREE.MeshStandardMaterial({color:0xd9b38c}));
+    head.position.y = 1.75; head.castShadow = true; g.add(head);
+    const cape = new THREE.Mesh(new THREE.BoxGeometry(.56,1.0,.08), new THREE.MeshStandardMaterial({color:0x4a0d0d}));
+    cape.position.set(0,1.0,.26); g.add(cape);
+    const armMat = new THREE.MeshStandardMaterial({color:0xd9b38c});
+    const armL = new THREE.Mesh(new THREE.BoxGeometry(.16,.7,.16), armMat);
+    armL.position.set(-.42,1.0,0); g.add(armL);
+    const armR = armL.clone(); armR.position.x = .42; g.add(armR);
+    const legMat = new THREE.MeshStandardMaterial({color:0x2e2418});
+    const legL = new THREE.Mesh(new THREE.BoxGeometry(.2,.7,.2), legMat);
+    legL.position.set(-.16,.35,0); g.add(legL);
+    const legR = legL.clone(); legR.position.x = .16; g.add(legR);
+    const crownMat = new THREE.MeshStandardMaterial({color:0xffd876, metalness:.75, roughness:.3, emissive:0x5a3a00, emissiveIntensity:.5});
+    const crownBase = new THREE.Mesh(new THREE.CylinderGeometry(.24,.24,.14,8), crownMat);
+    crownBase.position.y = 2.03; g.add(crownBase);
+    for(let i=0;i<5;i++){
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(.05,.16,4), crownMat);
+      const ang = (i/5)*Math.PI*2;
+      spike.position.set(Math.cos(ang)*.2, 2.16, Math.sin(ang)*.2);
+      g.add(spike);
+    }
+    return g;
+  }
+  let endingGroup = null;
+  let endingElapsed = 0;
+  const ENDING_DURATION = 38;
+  function buildEndingScene(){
+    // Clear the plaza fountain and the mission tent out of frame so the
+    // coronation aisle isn't staged on top of them.
+    if(fountainGroup) fountainGroup.visible = false;
+    if(missionTentGroup) missionTentGroup.visible = false;
+    endingGroup = new THREE.Group();
+    const king = makeKingMesh();
+    king.position.set(0, 0, 0);
+    king.rotation.y = Math.PI;
+    endingGroup.add(king);
+    // Honor-guard aisle, built from the exact same makeGuard() sprites used
+    // in gameplay, kneeling in fidelity toward the newly crowned king.
+    const guardTypes = ['sentry','spear','sentry','spear','sentry'];
+    for(let i=0;i<guardTypes.length;i++){
+      const zpos = 3.2 + i*3.4;
+      const gL = makeGuard(guardTypes[i]);
+      gL.position.set(-2.7, 0, zpos);
+      gL.rotation.x = -0.95;
+      endingGroup.add(gL);
+      const gR = makeGuard(guardTypes[i]);
+      gR.position.set(2.7, 0, zpos);
+      gR.rotation.x = -0.95;
+      endingGroup.add(gR);
+    }
+    scene.add(endingGroup);
+    // Detach the camera from the player rig so it can be scripted freely.
+    scene.add(camera);
+    camera.position.set(0, 8.5, 22);
+    camera.lookAt(0, 1.7, 0);
+    // Snap the world to a calm dawn for the coronation.
+    worldTime = 20;
+    updateDayNight(0);
+  }
+  function updateEndingCamera(dt){
+    if(phase !== 'ending' || !endingGroup) return;
+    endingElapsed += dt;
+    updateDayNight(dt * 0.04);
+    const t = Math.min(1, endingElapsed / ENDING_DURATION);
+    const ease = t*t*(3-2*t);
+    const startY=8.5, endY=3.4, startZ=22, endZ=7.5;
+    camera.position.y = startY + (endY-startY)*ease;
+    camera.position.z = startZ + (endZ-startZ)*ease;
+    camera.position.x = Math.sin(endingElapsed*0.06)*1.4;
+    camera.lookAt(0, 1.7, 0);
+  }
+  function triggerEnding(){
+    if(phase === 'ending') return;
+    phase = 'ending';
+    P.dead = false;
+    intentionalUnlock = true;
+    document.exitPointerLock();
+    if(wizardBoss){ scene.remove(wizardBoss.mesh); wizardBoss = null; }
+    wizardActive = false;
+    for(let i=projectiles.length-1;i>=0;i--){ scene.remove(projectiles[i].mesh); projectiles.splice(i,1); }
+    const hud = document.getElementById('hud'); if(hud) hud.style.display = 'none';
+    const hint = document.getElementById('hint'); if(hint) hint.style.display = 'none';
+    const vignette = document.getElementById('vignette'); if(vignette) vignette.style.display = 'none';
+    const fade = document.getElementById('endingFade');
+    // Fade the world slowly to black.
+    requestAnimationFrame(()=>{ fade.style.opacity = '1'; });
+    setTimeout(()=>{
+      buildEndingScene();
+      const screen = document.getElementById('endingScreen');
+      const textEl = document.getElementById('endingText');
+      textEl.textContent =
+        "At last, the long years of bloodshed came to an end.\n" +
+        "The Evil Wizard King was defeated, and with his death, his reign of terror was broken.\n" +
+        "For the first time in generations, the villagers gathered beneath a peaceful sky.\n" +
+        "And there, they crowned a new ruler—\n" +
+        "the King of Villagers.\n" +
+        "A new age had begun.";
+      screen.style.display = 'flex';
+      // Reveal the 3D coronation scene by fading the black back out.
+      requestAnimationFrame(()=>{ fade.style.opacity = '0'; });
+      setTimeout(()=>{ textEl.style.animationPlayState = 'running'; }, 2600);
+    }, 3400);
+  }
+  function makeWizardBoss(){
+    const g=new THREE.Group();
+    const robe=new THREE.Mesh(new THREE.ConeGeometry(1.15,2.8,8),new THREE.MeshStandardMaterial({color:0x09090b,roughness:.75,emissive:0x120019,emissiveIntensity:.35}));
+    robe.position.y=-.5; g.add(robe);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.58,12,10),new THREE.MeshStandardMaterial({color:0x564b63,roughness:.7})); head.position.y=1.35; g.add(head);
+    const hood=new THREE.Mesh(new THREE.ConeGeometry(.78,1.0,8),new THREE.MeshStandardMaterial({color:0x030305,roughness:.8})); hood.position.y=1.72; g.add(hood);
+    const eyeMat=new THREE.MeshStandardMaterial({color:0x7b2cff,emissive:0x5b00ff,emissiveIntensity:2.5});
+    [-.2,.2].forEach(x=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.075,8,6),eyeMat);e.position.set(x,1.42,-.5);g.add(e);});
+    for(let i=0;i<3;i++){const orb=new THREE.Mesh(new THREE.SphereGeometry(.12,8,6),eyeMat);orb.position.set(Math.cos(i*2.09)*.95,.2,Math.sin(i*2.09)*.95);g.add(orb);}
+    return g;
+  }
+  function spawnWizardBoss(){
+    if(wizardBoss || wizardDefeated) return;
+    if(!allMissionsComplete()){
+      towerLockNoticeTimer -= 1/60;
+      if(towerLockNoticeTimer<=0){
+        showBanner('THE TOWER IS SEALED — COMPLETE ALL MISSIONS FIRST');
+        towerLockNoticeTimer = 4;
+      }
+      return;
+    }
+    const mesh=makeWizardBoss();
+    mesh.position.set(BOSS_TOWER.x, BOSS_TOWER.topY+14, BOSS_TOWER.z);
+    scene.add(mesh);
+    wizardBoss={mesh,isWizardBoss:true,hp:900,maxHp:900,dead:false,orbit:0,shotTimer:5};
+    wizardActive=true; wizardShotTimer=5; wizardVulnerable=false; wizardVulnerableTimer=0;
+    if(towerWard) towerWard.visible = false;
+    showBanner('THE TOWER WIZARD HAS AWAKENED');
+    sfx('alert');
+    updateBossHealthHUD();
+  }
+  function updateWizardBoss(dt){
+    if(towerWard){
+      towerWard.visible = !allMissionsComplete();
+      if(towerWard.visible){
+        towerWard.rotation.z += dt*.3;
+        const pulse = 0.55 + Math.sin(performance.now()/450)*.15;
+        towerWard.material.opacity = pulse;
+      }
+    }
+    if(!wizardActive || !wizardBoss || P.dead) return;
+    wizardBoss.orbit += dt*.42;
+    const r=17.5;
+    wizardBoss.mesh.position.set(BOSS_TOWER.x+Math.cos(wizardBoss.orbit)*r, BOSS_TOWER.topY+14+Math.sin(wizardBoss.orbit*1.7)*2.4, BOSS_TOWER.z+Math.sin(wizardBoss.orbit)*r);
+    wizardBoss.mesh.rotation.y += dt*1.5;
+    if(wizardVulnerable){
+      wizardVulnerableTimer += dt;
+      if(wizardVulnerableTimer > 4){ wizardVulnerable=false; wizardVulnerableTimer=0; wizardShotTimer=0; }
+      return;
+    }
+    wizardShotTimer -= dt;
+    if(wizardShotTimer<=0){
+      const start=wizardBoss.mesh.position.clone(); start.y-=.2;
+      const target=player.position.clone(); target.y+=1.0;
+      spawnBossBolt(start,target);
+      wizardVulnerable=true;
+      wizardVulnerableTimer=0;
+      showBanner('DODGE! THE WIZARD IS VULNERABLE');
+    }
+  }
+  function registerHit(v, dmg){
+    v.hp -= dmg;
+    if(v.villageId){
+      alertVillage(v.villageId);
+      scareNearbyVillagers(v.mesh.position, 12);
+    }
+    if(!v.isGuard){
+      triggerVillagerFear(v, 'hurt');
+      scareNearbyVillagers(v.mesh.position, 12);
+    }
+    burst(v.mesh.position.clone(), 0x8a0000, 10);
+    breakDisguise();
+    if(v.hp<=0 && !v.dead) killVillager(v);
+  }
+  function killVillager(v){
+    v.dead = true; v.state='dead';
+    P.kills++;
+    document.getElementById('killCount').textContent = P.kills;
+    const amount = v.isGuard ? (20+Math.floor(Math.random()*22)) : (5+Math.floor(Math.random()*12));
+    spawnGold(v.mesh.position, amount);
+    burst(v.mesh.position.clone(), 0x6b0000, 18);
+    if(v.bountyMarker) v.bountyMarker.visible = false;
+    showBanner(v.isBountyTarget ? 'TARGET ELIMINATED' : (v.isGuard ? 'GUARD SLAIN' : 'VILLAGER FALLEN'));
+    checkMissionProgress(v);
+  }
+  function flashCrosshair(){
+    const c = document.getElementById('crosshair');
+    c.classList.add('hit');
+    setTimeout(()=>c.classList.remove('hit'), 140);
+  }
+  let bannerTimeout;
+  function showBanner(text){
+    const b = document.getElementById('banner');
+    b.textContent = text; b.style.opacity = 1;
+    clearTimeout(bannerTimeout);
+    bannerTimeout = setTimeout(()=> b.style.opacity=0, 900);
+  }
+  function updateAlertHUD(){
+    const el = document.getElementById('alertPill');
+    if(!el) return;
+    el.textContent = `⚠ Alert ${alertLevel}`;
+  }
+  function hurtPlayer(rawDmg, isRanged){
+    if(P.dead) return;
+    let dmg = rawDmg;
+    if(isRanged && currentArmor && currentArmor.blockArrows){ dmg *= (1-currentArmor.blockArrows); }
+    let absorbed = 0;
+    if(P.armor>0){ absorbed = Math.min(P.armor, dmg); P.armor -= absorbed; dmg -= absorbed; }
+    const vg = document.getElementById('vignette');
+    if(absorbed>0){
+      sfx('armor');
+      vg.style.boxShadow = 'inset 0 0 220px 60px rgba(110,170,220,.5)';
+      setTimeout(()=> vg.style.boxShadow='inset 0 0 220px 40px rgba(150,0,0,0)', 150);
+    }
+    if(dmg>0){
+      P.health -= dmg;
+      P.lastHitTime = performance.now()/1000;
+      sfx('hurt');
+      vg.style.boxShadow = 'inset 0 0 220px 60px rgba(180,0,0,.55)';
+      setTimeout(()=> vg.style.boxShadow='inset 0 0 220px 40px rgba(150,0,0,0)', 180);
+      if(P.health<=0){ P.health=0; onPlayerDeath(); }
+    }
+  }
+
+  // ================= GUARDS / ALERT SYSTEM =================
+  function callGuards(){
+    alertLevel++;
+    peaceTimer = 0;
+    const count = Math.min(2+alertLevel, 14);
+    const typePool = ['sentry'];
+    if(alertLevel>=2) typePool.push('spear');
+    if(alertLevel>=3) typePool.push('archer');
+    if(alertLevel>=5) typePool.push('berserker');
+    const statMult = 1 + (alertLevel-1)*0.12;
+    for(let i=0;i<count;i++){
+      const type = typePool[Math.floor(Math.random()*typePool.length)];
+      const gt = GUARD_TYPES[type];
+      const pos = randomStreetPos(player.position.x, player.position.z, 22, 38);
+      const mesh = makeGuard(type);
+      mesh.position.set(pos.x, 0, pos.z);
+      scene.add(mesh);
+      villagers.push({
+        mesh, isGuard:true, type,
+        hp: Math.round(BASE_GUARD_HP*gt.hpMult*statMult), maxHp: Math.round(BASE_GUARD_HP*gt.hpMult*statMult),
+        dmgRange:[BASE_GUARD_DMG[0]*gt.dmgMult*statMult, BASE_GUARD_DMG[1]*gt.dmgMult*statMult],
+        speed: BASE_GUARD_SPEED*gt.speedMult, range: gt.range, ranged: gt.ranged, stationary:false,
+        atkCooldownBase: gt.atkCooldown, attackTimer: Math.random()*0.5,
+        state:'attack', dead:false, fallProgress:0
+      });
+    }
+    showBanner(`GUARDS CALLED (ALERT ${alertLevel})`);
+    sfx('alert');
+    updateAlertHUD();
+  }
+
+  // The countdown starts/restarts whenever a villager becomes scared.
+  const GUARD_CALL_MIN = 300, GUARD_CALL_MAX = 600;
+  let guardCallTimer = null;
+
+  // Single source of truth for "is an alarm already in flight": either a
+  // countdown is already ticking, or guards are already out. Every place
+  // that might start a new alarm must check this first, so a second
+  // villager can never start (or restart) a countdown over the first one.
+  function alarmInProgress(){
+    return guardCallTimer !== null || alertLevel > 0;
+  }
+
+  function resetGuardCallTimer(reason){
+    if(alarmInProgress()) return;
+    guardCallTimer = GUARD_CALL_MIN + Math.random()*(GUARD_CALL_MAX-GUARD_CALL_MIN);
+    document.getElementById('loiterPrompt').textContent = `Someone was scared — guards may be called in ${Math.ceil(guardCallTimer/60)}–10 minutes`;
+    document.getElementById('loiterPrompt').style.display = 'block';
+  }
+
+  function triggerVillagerFear(v, reason, restartEvenIfAlreadyFleeing=false){
+    if(v.isGuard || v.dead) return false;
+    const newlyScared = v.state !== 'flee';
+    v.state = 'flee';
+    v.calmTimer = 0;
+    if((newlyScared || restartEvenIfAlreadyFleeing) && !alarmInProgress()) resetGuardCallTimer(reason);
+    return newlyScared || restartEvenIfAlreadyFleeing;
+  }
+
+  function scareNearbyVillagers(point, radius){
+    let scared = false;
+    villagers.forEach(other=>{
+      if(other.isGuard || other.dead) return;
+      const d = Math.hypot(other.mesh.position.x-point.x, other.mesh.position.z-point.z);
+      if(d <= radius){
+        scared = triggerVillagerFear(other, 'witnessed attack', true) || scared;
+      }
+    });
+    return scared;
+  }
+
+  function updateGuardCallTimer(dt){
+    if(guardCallTimer === null){
+      document.getElementById('loiterPrompt').style.display = 'none';
+      return;
+    }
+    guardCallTimer -= dt;
+    if(guardCallTimer <= 0){
+      guardCallTimer = null;
+      callGuards();
+      document.getElementById('loiterPrompt').style.display = 'none';
+    } else {
+      document.getElementById('loiterPrompt').textContent = `Villagers are alarmed — guards may be called in ${Math.ceil(guardCallTimer/60)} minute(s)`;
+      document.getElementById('loiterPrompt').style.display = 'block';
+    }
+  }
+
+  // ================= HORSE =================
+  function makeHorse(){
+    const g = new THREE.Group();
+    const bodyMat = new THREE.MeshStandardMaterial({color:0x6b3f24, roughness:.78});
+    const darkMat = new THREE.MeshStandardMaterial({color:0x24150e, roughness:.88});
+    const muzzleMat = new THREE.MeshStandardMaterial({color:0x4a2b1c, roughness:.9});
+
+    // More natural horse proportions using rounded primitives instead of boxes.
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(.72,1.25,6,12), bodyMat);
+    body.rotation.x=Math.PI/2; body.scale.z=1.18; body.position.set(0,1.42,0); body.castShadow=true; g.add(body);
+
+    const chest = new THREE.Mesh(new THREE.SphereGeometry(.76,16,10), bodyMat);
+    chest.scale.set(1,.98,.82); chest.position.set(0,1.48,.62); chest.castShadow=true; g.add(chest);
+
+    const neck = new THREE.Mesh(new THREE.CapsuleGeometry(.34,1.15,6,12), bodyMat);
+    neck.position.set(0,2.15,.67); neck.rotation.x=-0.27; neck.castShadow=true; g.add(neck);
+
+    const head = new THREE.Mesh(new THREE.CapsuleGeometry(.28,.68,5,10), bodyMat);
+    head.position.set(0,2.88,1.08); head.rotation.x=-0.12; head.scale.z=1.12; head.castShadow=true; g.add(head);
+
+    const muzzle = new THREE.Mesh(new THREE.SphereGeometry(.27,12,8), muzzleMat);
+    muzzle.scale.set(1,.72,1.18); muzzle.position.set(0,2.73,1.52); muzzle.castShadow=true; g.add(muzzle);
+
+    // Ears
+    [-.18,.18].forEach(x=>{
+      const ear=new THREE.Mesh(new THREE.ConeGeometry(.13,.38,7),bodyMat);
+      ear.position.set(x,3.35,.98); ear.rotation.z=x<0?-.16:.16; ear.castShadow=true; g.add(ear);
+    });
+
+    // Eyes
+    [-.27,.27].forEach(x=>{
+      const eye=new THREE.Mesh(new THREE.SphereGeometry(.055,8,8),darkMat);
+      eye.position.set(x,2.98,1.34); g.add(eye);
+    });
+
+    // Flowing mane made from several tapered strands.
+    for(let i=0;i<7;i++){
+      const mane=new THREE.Mesh(new THREE.ConeGeometry(.10,.62,6),darkMat);
+      mane.position.set(0,3.12-i*.16,.72-i*.03);
+      mane.rotation.z=(i%2?-0.18:0.18); mane.rotation.x=-0.12; mane.castShadow=true; g.add(mane);
+    }
+
+    // Four articulated legs with joints and dark hooves.
+    [-.48,.48].forEach(x=>[-.78,.78].forEach(z=>{
+      const upper=new THREE.Mesh(new THREE.CapsuleGeometry(.115,.62,5,8),bodyMat);
+      upper.position.set(x,.95,z); upper.castShadow=true; g.add(upper);
+      const lower=new THREE.Mesh(new THREE.CapsuleGeometry(.09,.48,5,8),bodyMat);
+      lower.position.set(x,.48,z); lower.castShadow=true; g.add(lower);
+      const hoof=new THREE.Mesh(new THREE.SphereGeometry(.15,8,6),darkMat);
+      hoof.scale.set(1,.55,1.35); hoof.position.set(x,.13,z+.06); hoof.castShadow=true; g.add(hoof);
+    }));
+
+    // Fuller tail with several strands.
+    for(let i=0;i<5;i++){
+      const tail=new THREE.Mesh(new THREE.ConeGeometry(.10,.82,6),darkMat);
+      tail.position.set((i-2)*.07,1.68,-1.32); tail.rotation.x=Math.PI/2 + (i-2)*.06; tail.castShadow=true; g.add(tail);
+    }
+
+    const saddle = new THREE.Mesh(new THREE.CapsuleGeometry(.55,.55,4,10),new THREE.MeshStandardMaterial({color:0x3b2416,roughness:.82}));
+    saddle.scale.set(1.35,.22,1.05); saddle.position.set(0,1.93,.02); saddle.castShadow=true; g.add(saddle);
+    const bridle = new THREE.Mesh(new THREE.TorusGeometry(.30,.035,6,16),new THREE.MeshStandardMaterial({color:0x16120f,metalness:.25,roughness:.65}));
+    bridle.rotation.x=Math.PI/2; bridle.position.set(0,2.92,1.38); g.add(bridle);
+    return g;
+  }
+  function spawnHorse(){
+    if(horse) return;
+    horse=makeHorse();
+    horse.position.set(SHOP_POS.x-4.5,0,SHOP_POS.z+4.5);
+    horse.rotation.y=Math.PI;
+    scene.add(horse);
+  }
+  function mountHorse(){
+    if(!horseOwned || !horse || horseMounted) return;
+    if(Math.hypot(player.position.x-horse.position.x,player.position.z-horse.position.z)>4.5){
+      showBanner('GET CLOSER TO YOUR HORSE'); return;
+    }
+    horseMounted=true;
+    player.position.y=.7;
+    showBanner('HORSE MOUNTED — H TO DISMOUNT');
+  }
+  function dismountHorse(){
+    if(!horseMounted) return;
+    horseMounted=false;
+    player.position.y=0;
+    if(horse){
+      const off=new THREE.Vector3(1.8,0,0).applyEuler(new THREE.Euler(0,yaw,0));
+      player.position.x=horse.position.x+off.x; player.position.z=horse.position.z+off.z;
+      pushOutOfObstacles(player.position,PLAYER_RADIUS);
+    }
+    showBanner('HORSE DISMOUNTED');
+  }
+  function updateHorse(dt){
+    if(!horse || !horseMounted) return;
+    horse.position.x=player.position.x;
+    horse.position.z=player.position.z;
+    horse.position.y=0;
+    horse.rotation.y=yaw;
+  }
+  function buyHorse(){
+    if(horseOwned){ showBanner('YOU ALREADY OWN A HORSE'); return; }
+    if(gold < HORSE_COST){ showBanner(`NOT ENOUGH GOLD — HORSE COSTS ${HORSE_COST}G`); return; }
+    gold -= HORSE_COST; horseOwned=true; spawnHorse(); updateHUD(); renderShop();
+    showBanner('HORSE PURCHASED — PRESS H NEAR IT TO MOUNT');
+  }
+
+  // ================= MOVEMENT =================
+  const MOVE_SPEED=6, SPRINT_SPEED=10, HORSE_SPEED=18, HORSE_SPRINT_SPEED=24, PLAYER_RADIUS=0.55;
+  const GRAVITY = -34;
+  let playerVelY = 0;
+  function groundSupportAt(x,z){
+    // Ordinarily the ground is flat at y=0. Near the tower, once the player has
+    // actually climbed up (they're already near the roof height), the top
+    // platform counts as solid ground so they don't fall through it — but at
+    // low height near the tower base this same footprint stays plain ground,
+    // so walking up to the tower door doesn't yank the player upward.
+    const d = Math.hypot(x-BOSS_TOWER.x, z-BOSS_TOWER.z);
+    if(d < 12.4 && player.position.y > BOSS_TOWER.topY-6) return BOSS_TOWER.topY;
+    return 0;
+  }
+  function towerBlocksSight(start, end){
+    if(!towerWallMesh || !towerWallMesh.visible) return false;
+    const dir=end.clone().sub(start);
+    const dist=dir.length();
+    if(dist<=0.001) return false;
+    dir.normalize();
+    const ray=new THREE.Raycaster(start,dir,0,dist);
+    const hits=ray.intersectObject(towerWallMesh,false);
+    return hits.length>0 && hits[0].distance < dist-0.05;
+  }
+  function pushOutOfObstacles(pos, radius){
+    for(let i=0;i<obstacles.length;i++){
+      const o = obstacles[i];
+      if(o.kind==='waterWall'){
+        if(Math.abs(pos.z) <= o.halfLength && pos.x > o.x-radius){
+          pos.x = o.x-radius;
+        }
+        continue;
+      }
+      if(o.kind==='wizardTowerWall'){
+        const dx=pos.x-o.x, dz=pos.z-o.z, d=Math.sqrt(dx*dx+dz*dz);
+        // The doorway is a slice on the south (-Z) face only — don't open a phantom gap on the far side.
+        const nearDoor = dz < -(o.radius-0.9) && Math.abs(dx) < 2.9;
+        if(d > o.radius-radius && d < o.radius+radius && !nearDoor){
+          const nd=Math.max(0.001,d);
+          const target = d < o.radius ? (o.radius-radius) : (o.radius+radius);
+          pos.x += (dx/nd)*(target-d); pos.z += (dz/nd)*(target-d);
+        }
+        continue;
+      }
+      const dx=pos.x-o.x, dz=pos.z-o.z, d=Math.sqrt(dx*dx+dz*dz), minD=o.radius+radius;
+      if(d<minD && d>0.0001){ pos.x += (dx/d)*(minD-d); pos.z += (dz/d)*(minD-d); }
+    }
+  }
+  function updateMovement(dt){
+    player.rotation.y = yaw;
+    camera.rotation.x = pitch;
+    const forward = new THREE.Vector3(0,0,-1).applyEuler(new THREE.Euler(0,yaw,0));
+    const right = new THREE.Vector3(1,0,0).applyEuler(new THREE.Euler(0,yaw,0));
+    let moveDir = new THREE.Vector3();
+    if(keys['KeyW']) moveDir.add(forward);
+    if(keys['KeyS']) moveDir.sub(forward);
+    if(keys['KeyD']) moveDir.add(right);
+    if(keys['KeyA']) moveDir.sub(right);
+    const moving = moveDir.lengthSq() > 0.0001;
+    if(moving) moveDir.normalize();
+    const sprinting = keys['ShiftLeft'] && moving && P.stamina>0;
+    const speed = horseMounted ? (sprinting ? HORSE_SPRINT_SPEED : HORSE_SPEED) : (sprinting ? SPRINT_SPEED : MOVE_SPEED);
+    if(sprinting) P.stamina = Math.max(0, P.stamina - 28*dt);
+    else P.stamina = Math.min(P.maxStamina, P.stamina + 18*dt);
+    const newPos = player.position.clone().add(moveDir.multiplyScalar(speed*dt));
+    newPos.x = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND, newPos.x));
+    newPos.z = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND, newPos.z));
+    pushOutOfObstacles(newPos, PLAYER_RADIUS);
+    player.position.copy(newPos);
+    const td=Math.hypot(player.position.x-BOSS_TOWER.x,player.position.z-BOSS_TOWER.z);
+    let onStairs = false;
+    if(td < TOWER_STAIR_OUTER && td > TOWER_STAIR_INNER){
+      const ang=Math.atan2(player.position.z-BOSS_TOWER.z,player.position.x-BOSS_TOWER.x);
+      if(towerStairAngle===null) towerStairAngle=ang;
+      let delta=ang-towerStairAngle;
+      while(delta>Math.PI) delta-=Math.PI*2;
+      while(delta<-Math.PI) delta+=Math.PI*2;
+      towerStairProgress=Math.max(0,Math.min(Math.PI*2*TOWER_STAIR_TURNS, towerStairProgress+delta));
+      towerStairAngle=ang;
+      const stairY=Math.max(0,Math.min(BOSS_TOWER.topY-1.0, 1.0 + (towerStairProgress/(Math.PI*2*TOWER_STAIR_TURNS))*(BOSS_TOWER.topY-2.0)));
+      if(player.position.y <= stairY+0.5){
+        // Climbing the spiral: the steps carry the player up, gravity is suspended.
+        player.position.y=Math.max(player.position.y,stairY);
+        playerVelY=0;
+        onStairs=true;
+      }
+      if(player.position.y >= BOSS_TOWER.topY-2.2) spawnWizardBoss();
+    } else if(td >= TOWER_STAIR_OUTER){
+      towerStairAngle=null;
+      towerStairProgress=0;
+    }
+    if(td < TOWER_STAIR_OUTER-.1 && player.position.y >= BOSS_TOWER.topY-2.2) spawnWizardBoss();
+    if(!onStairs && !horseMounted){
+      const support = groundSupportAt(player.position.x, player.position.z);
+      if(player.position.y > support){
+        playerVelY += GRAVITY*dt;
+        player.position.y = Math.max(support, player.position.y + playerVelY*dt);
+        if(player.position.y <= support) playerVelY = 0;
+      } else if(player.position.y < support){
+        player.position.y = support;
+        playerVelY = 0;
+      } else {
+        playerVelY = 0;
+      }
+    }
+    if(horseMounted) updateHorse(dt);
+    const now = performance.now()/1000;
+    if(now - P.lastHitTime > 4 && P.health < P.maxHealth) P.health = Math.min(P.maxHealth, P.health + 3*dt);
+    nearShop = Math.hypot(player.position.x-SHOP_POS.x, player.position.z-SHOP_POS.z) < 4.5;
+    document.getElementById('interactPrompt').style.display = nearShop ? 'block' : 'none';
+    nearTent = Math.hypot(player.position.x-TENT_POS.x, player.position.z-TENT_POS.z) < 4.5;
+    document.getElementById('tentPrompt').style.display = nearTent ? 'block' : 'none';
+  }
+  const _moveDir = new THREE.Vector3();
+  const _movePos = new THREE.Vector3();
+  function moveTowards(mesh, target, speed, dt, avoidRadius){
+    const dir = _moveDir.set(target.x-mesh.position.x, 0, target.z-mesh.position.z);
+    const d = dir.length();
+    if(d < 0.05) return;
+    dir.normalize();
+    const p = _movePos.set(mesh.position.x + dir.x*speed*dt, 0, mesh.position.z + dir.z*speed*dt);
+    pushOutOfObstacles(p, avoidRadius||0.5);
+    mesh.position.x = p.x; mesh.position.z = p.z;
+    mesh.lookAt(mesh.position.x+dir.x, mesh.position.y, mesh.position.z+dir.z);
+  }
+
+  // ================= VILLAGER / GUARD AI =================
+  const ALERT_RADIUS=9, FLEE_SAFE_DIST=22;
+  const _fleeAway = new THREE.Vector3();
+  const _fleeTarget = new THREE.Vector3();
+  function updateVillagers(dt){
+    const pPos = player.position;
+    const disguised = isDisguised();
+    villagers.forEach(v=>{
+      if(v.dead){
+        if(v.fallProgress<1){
+          v.fallProgress = Math.min(1, v.fallProgress + dt*2.2);
+          v.mesh.rotation.z = THREE.MathUtils.lerp(0, Math.PI/2, v.fallProgress);
+        }
+        return;
+      }
+      if(v.isGuard){
+        if(v.isWarden){
+          // The Village Warden always attacks, even through a disguise.
+          resolveAttack(v, dt, pPos);
+          return;
+        }
+        if(v.isOutskirtGuard){
+          const villageState=villageTimers[v.villageId];
+          const distToPlayer=Math.hypot(pPos.x-v.mesh.position.x,pPos.z-v.mesh.position.z);
+          if(!villageState || !villageState.alerted){
+            if(v.isWarden){ resolveAttack(v,dt,pPos); return; }
+            if(v.isTowerArcher && disguised){ v.state='guard'; return; }
+            if(!disguised && distToPlayer < (v.isTowerArcher ? (v.range||48) : 18)){ v.state='attack'; }
+            else { v.state='guard'; return; }
+          }
+          resolveAttack(v, dt, pPos);
+          return;
+        }
+        if(disguised) return; // main-town guards don't recognize you while disguised
+        resolveAttack(v, dt, pPos);
+        return;
+      }
+      const dx = pPos.x-v.mesh.position.x, dz = pPos.z-v.mesh.position.z;
+      const distToPlayer = Math.sqrt(dx*dx+dz*dz);
+      if(v.isVillageVillager){
+        const village=VILLAGES.find(x=>x.id===v.villageId);
+        if(!village) return;
+        if(v.state==='wander'){
+          if(distToPlayer < ALERT_RADIUS && !disguised){ triggerVillagerFear(v, 'saw player'); }
+          else {
+            v.wanderTimer -= dt;
+            if(v.wanderTimer<=0){
+              v.wanderTimer=2+Math.random()*3;
+              const ang=Math.random()*Math.PI*2, rad=Math.random()*9;
+              v.target.set(village.x+Math.cos(ang)*rad,0,village.z+Math.sin(ang)*rad);
+            }
+            moveTowards(v.mesh,v.target,2.0,dt,0.5);
+          }
+        } else if(v.state==='flee'){
+          const away=_fleeAway.set(v.mesh.position.x-pPos.x,0,v.mesh.position.z-pPos.z); if(away.lengthSq()<0.001) away.set(1,0,0); away.normalize();
+          const fleeTarget=_fleeTarget.copy(v.mesh.position).add(away.multiplyScalar(7)); moveTowards(v.mesh,fleeTarget,7.2,dt,0.5);
+          if(distToPlayer>FLEE_SAFE_DIST){ v.calmTimer+=dt; if(v.calmTimer>2){v.state='wander';v.calmTimer=0;} } else v.calmTimer=0;
+        }
+        return;
+      }
+      if(v.state==='wander'){
+        // Disguise hides the player; without a disguise, being seen scares villagers.
+        if(distToPlayer < ALERT_RADIUS && !disguised){ triggerVillagerFear(v, 'saw player'); }
+        else {
+          v.wanderTimer -= dt;
+          if(v.wanderTimer<=0){
+            v.wanderTimer = 2+Math.random()*3;
+            // Villagers mostly roam their own neighborhood; only occasionally
+            // drift toward the central town square/market, for a slight but
+            // not overwhelming pull toward the center.
+            const usePlaza = Math.random() < (v.plazaBias || 0.15);
+            const centerX = usePlaza ? MARKET_POS.x : v.home.x;
+            const centerZ = usePlaza ? MARKET_POS.z : v.home.z;
+            const ang = Math.random()*Math.PI*2, rad = usePlaza ? 8+Math.random()*12 : 4+Math.random()*10;
+            v.target.set(centerX+Math.cos(ang)*rad, 0, centerZ+Math.sin(ang)*rad);
+          }
+          moveTowards(v.mesh, v.target, 2.0, dt, 0.5);
+        }
+      } else if(v.state==='flee'){
+        const away = _fleeAway.set(v.mesh.position.x-pPos.x, 0, v.mesh.position.z-pPos.z);
+        if(away.lengthSq()<0.001) away.set(Math.random()-.5,0,Math.random()-.5);
+        away.normalize();
+        const fleeTarget = _fleeTarget.copy(v.mesh.position).add(away.multiplyScalar(6));
+        moveTowards(v.mesh, fleeTarget, 7.2, dt, 0.5);
+        if(distToPlayer > FLEE_SAFE_DIST){
+          v.calmTimer += dt;
+          if(v.calmTimer > 2){ v.state='wander'; v.calmTimer=0; v.target.copy(v.mesh.position); }
+        } else v.calmTimer = 0;
+      }
+    });
+  }
+
+  function resolveAttack(v, dt, targetPos){
+    const tdx = targetPos.x-v.mesh.position.x, tdz = targetPos.z-v.mesh.position.z;
+    const td = Math.sqrt(tdx*tdx+tdz*tdz);
+    if(td > v.range){
+      if(v.stationary) return;
+      moveTowards(v.mesh, targetPos, v.speed, dt, 0.6);
+      return;
+    }
+    v.mesh.lookAt(targetPos.x, v.mesh.position.y, targetPos.z);
+    v.attackTimer -= dt;
+    if(v.attackTimer<=0){
+      v.attackTimer = v.atkCooldownBase;
+      const dmg = v.dmgRange[0] + Math.random()*(v.dmgRange[1]-v.dmgRange[0]);
+      if(v.ranged){ const tp=targetPos.clone(); tp.y+=1.4; const sh=v.mesh.position.clone(); sh.y+=1.1; spawnArrowProjectile(sh, tp, 0x883333); }
+      hurtPlayer(dmg, v.ranged);
+    }
+  }
+
+  // ================= POPULATION =================
+  const TARGET_POP = 220;
+  function spawnCivilian(){
+    const totalVillage=villagers.filter(v=>v.isVillageVillager&&!v.dead).length;
+    const targetVillage=VILLAGES.reduce((sum,v)=>sum+v.villagerTarget,0);
+    if(totalVillage < targetVillage){
+      const counts=VILLAGES.map(v=>({v,count:villagers.filter(x=>x.isVillageVillager&&x.villageId===v.id&&!x.dead).length})).sort((a,b)=>a.count-b.count);
+      spawnVillageVillager(counts[0].v); return;
+    }
+    const pos=randomStreetPos(); const mesh=makeVillagerCiv(); mesh.position.set(pos.x,0,pos.z); mesh.rotation.y=Math.random()*Math.PI*2; scene.add(mesh);
+    const tough=Math.random()<0.18; const maxHp=tough?(160+Math.floor(Math.random()*61)):100;
+    if(tough){ mesh.scale.set(1.08,1.08,1.08); }
+    villagers.push({mesh,isGuard:false,tough,hp:maxHp,maxHp,state:'wander',home:new THREE.Vector3(pos.x,0,pos.z),target:new THREE.Vector3(pos.x,0,pos.z),wanderTimer:Math.random()*3,calmTimer:0,dead:false,fallProgress:0,plazaBias:.10+Math.random()*.12});
+  }
+
+  // ================= GOLD / PARTICLES / PROJECTILES =================
+  function updateGold(dt){
+    for(let i=goldPickups.length-1;i>=0;i--){
+      const g = goldPickups[i];
+      g.mesh.rotation.z += dt*3;
+      const dx = player.position.x-g.mesh.position.x, dz = player.position.z-g.mesh.position.z;
+      if(Math.sqrt(dx*dx+dz*dz) < 1.6){
+        gold += g.amount; sfx('coin');
+        document.getElementById('goldCount').textContent = gold;
+        scene.remove(g.mesh); goldPickups.splice(i,1);
+      }
+    }
+  }
+  function updateParticles(dt){
+    for(let i=particles.length-1;i>=0;i--){
+      const p = particles[i];
+      p.vel.y -= 9*dt;
+      p.mesh.position.add(p.vel.clone().multiplyScalar(dt));
+      p.life -= dt*1.3;
+      p.mesh.material.opacity = Math.max(0,p.life/p.maxLife);
+      if(p.life<=0){ scene.remove(p.mesh); p.mesh.geometry.dispose(); p.mesh.material.dispose(); particles.splice(i,1); }
+    }
+  }
+  function updateProjectiles(dt){
+    for(let i=projectiles.length-1;i>=0;i--){
+      const pr=projectiles[i];
+      if(pr.kind==='bossBolt' || pr.kind==='flame'){
+        pr.pos.addScaledVector(pr.vel,dt); pr.mesh.position.copy(pr.pos); pr.life-=dt;
+        if(pr.kind==='bossBolt'){
+          const prev=pr.pos.clone().sub(pr.vel.clone().multiplyScalar(dt));
+          if(towerBlocksSight(prev,pr.pos)){ pr.life=0; }
+          if(!P.dead && pr.life>0 && pr.pos.distanceTo(player.position.clone().add(new THREE.Vector3(0,1,0))) < pr.radius){
+            hurtPlayer(pr.damage,true); pr.life=0;
+          }
+        }
+        if(pr.kind==='flame' && !pr.hitApplied && pr.target && !pr.target.dead){
+          const targetPoint = pr.target.isWizardBoss
+            ? pr.target.mesh.position.clone()
+            : pr.target.mesh.position.clone().add(new THREE.Vector3(0,1,0));
+          if(pr.pos.distanceTo(targetPoint) <= pr.radius){
+            if(pr.target.isWizardBoss) registerWizardHit(pr.damage);
+            else registerHit(pr.target, pr.damage);
+            flashCrosshair(); sfx('hit');
+            pr.hitApplied=true;
+            pr.life=0;
+          }
+        }
+        if(pr.life<=0){ scene.remove(pr.mesh); projectiles.splice(i,1); }
+      } else if(pr.kind==='arrow'){
+        pr.elapsed += dt;
+        const t=Math.min(1,pr.elapsed/pr.duration);
+        pr.mesh.position.lerpVectors(pr.start,pr.end,t);
+        if(t>=1){
+          if(!pr.hitApplied && pr.target && !pr.target.dead){
+            if(pr.target.isWizardBoss) registerWizardHit(pr.damage);
+            else registerHit(pr.target, pr.damage);
+            flashCrosshair();
+            sfx('hit');
+            pr.hitApplied=true;
+          }
+          scene.remove(pr.mesh);
+          projectiles.splice(i,1);
+        }
+      } else {
+        pr.elapsed += dt;
+        const t=Math.min(1,pr.elapsed/pr.duration);
+        pr.mesh.position.lerpVectors(pr.start,pr.end,t);
+        if(t>=1){ scene.remove(pr.mesh); projectiles.splice(i,1); }
+      }
+    }
+  }
+  function updateSwing(dt){
+    swingCooldown = Math.max(0, swingCooldown-dt);
+    if(swinging){
+      swingTimer += dt;
+      const t = Math.min(1, swingTimer/(0.32*(currentWeapon.cooldown/0.55)));
+      sword.rotation.x = SWORD_REST.x - Math.sin(t*Math.PI)*1.9;
+      sword.rotation.z = SWORD_REST.z - Math.sin(t*Math.PI)*0.7;
+      if(t>=0.45 && !hitRegistered){ hitRegistered=true; doHitCheck(); }
+      if(t>=1){ swinging=false; sword.rotation.x=SWORD_REST.x; sword.rotation.z=SWORD_REST.z; }
+    }
+  }
+  function updateBowDraw(dt){
+    bowCooldown = Math.max(0, bowCooldown-dt);
+    const fovBlend = 1 - Math.exp(-dt*16);
+    if(Math.abs(camera.fov-targetCameraFov) > 0.01){
+      camera.fov += (targetCameraFov-camera.fov)*fovBlend;
+      camera.updateProjectionMatrix();
+    } else if(camera.fov !== targetCameraFov){
+      camera.fov = targetCameraFov;
+      camera.updateProjectionMatrix();
+    }
+    if(isDrawing && equippedBowId){
+      drawTime = Math.min(currentBow.drawTime, drawTime+dt);
+      const frac = drawTime/currentBow.drawTime;
+      stringGroup.position.z = frac*0.22;
+      document.getElementById('drawBarFill').style.width = (frac*100)+'%';
+    }
+  }
+  function updateHUD(){
+    document.getElementById('healthFill').style.width = (P.health/P.maxHealth*100)+'%';
+    document.getElementById('staminaFill').style.width = (P.stamina/P.maxStamina*100)+'%';
+    const at = document.getElementById('armorTrack'), al = document.getElementById('armorLabel');
+    if(P.maxArmor>0){
+      at.style.display='block'; al.style.display='block';
+      document.getElementById('armorFill').style.width = (P.armor/P.maxArmor*100)+'%';
+    } else { at.style.display='none'; al.style.display='none'; }
+    document.getElementById('disguisePill').style.display = isDisguised() ? 'inline-block' : 'none';
+  }
+
+  // Built-in all-unlocks code for testing: all weapons, horse, and every mission complete.
+  // TEST ALL-UNLOCK CODE: 51O-eyJnIjo5OTk5OSwiayI6MCwib3ciOlsicnVzdHkiLCJpcm9uIiwid2FyIiwiYmVyc2Vya2VyIiwic2hvcnRib3ciLCJsb25nYm93IiwiZmxhbWVib3ciXSwiZXciOiJiZXJzZXJrZXIiLCJlYiI6ImZsYW1lYm93Iiwib2EiOltdLCJlYSI6bnVsbCwiaCI6dHJ1ZSwibSI6WyJkb25lIiwiZG9uZSIsImRvbmUiLFsiZG9uZSIsOF0sWyJkb25lIiw4XSxbImRvbmUiLDhdLFsiZG9uZSIsMTVdXX0=
+  // ================= PASSWORD SYSTEM =================
+  // A password is a snapshot of everything the player has earned: gold, kills,
+  // owned/equipped gear, and the horse. It's handed out on death so a player who
+  // has to log out can punch it back in at the start screen and pick up right
+  // where their next respawn would have put them (health/stamina full, at the boat).
+  function buildPassword(){
+    const state = {
+      g: gold,
+      k: P.kills,
+      ow: Array.from(ownedWeapons),
+      ew: equippedWeaponId,
+      eb: equippedBowId,
+      oa: Array.from(ownedArmor),
+      ea: equippedArmorId,
+      h: horseOwned,
+      m: MISSIONS.map(m => m.type==='raid' ? [m.status, m.progress] : m.status)
+    };
+    const json = JSON.stringify(state);
+    let b64;
+    try{ b64 = btoa(unescape(encodeURIComponent(json))); }catch(e){ return ''; }
+    let sum = 0;
+    for(let i=0;i<b64.length;i++) sum = (sum + b64.charCodeAt(i)*(i+1)) % 9973;
+    const checksum = sum.toString(36).toUpperCase().padStart(3,'0');
+    return checksum + '-' + b64;
+  }
+  function parsePassword(pw){
+    // Built-in completion password: all missions are already completed and every weapon, including Flame Bow, is unlocked.
+    if(pw && ['ALLMISSIONS','WIZARD_COMPLETE'].includes(pw.trim().toUpperCase())){
+      return {g:10000,k:0,ow:['rusty','iron','war','berserker','shortbow','longbow','flamebow'],ew:'berserker',eb:'flamebow',oa:[],ea:null,h:false,m:['done','done','done',['done',8],['done',8],['done',8],['done',15]]};
+    }
+    if(!pw) return null;
+    pw = pw.trim();
+    const dash = pw.indexOf('-');
+    if(dash<0) return null;
+    const checksum = pw.slice(0,dash);
+    const b64 = pw.slice(dash+1);
+    let sum = 0;
+    for(let i=0;i<b64.length;i++) sum = (sum + b64.charCodeAt(i)*(i+1)) % 9973;
+    const expected = sum.toString(36).toUpperCase().padStart(3,'0');
+    if(checksum !== expected) return null;
+    try{
+      const json = decodeURIComponent(escape(atob(b64)));
+      const state = JSON.parse(json);
+      if(typeof state !== 'object' || state===null) return null;
+      return state;
+    }catch(e){ return null; }
+  }
+  function applyPassword(state){
+    gold = Number(state.g)||0;
+    P.kills = Number(state.k)||0;
+    ownedWeapons.clear(); ownedWeapons.add('rusty');
+    (Array.isArray(state.ow)?state.ow:[]).forEach(id=>{ if(WEAPONS.some(w=>w.id===id)) ownedWeapons.add(id); });
+    ownedArmor.clear();
+    (Array.isArray(state.oa)?state.oa:[]).forEach(id=>{ if(ARMORS.some(a=>a.id===id)) ownedArmor.add(id); });
+    if(state.ew && ownedWeapons.has(state.ew)) equipWeapon(state.ew); else equipWeapon('rusty');
+    if(state.eb && ownedWeapons.has(state.eb)) equipWeapon(state.eb);
+    if(state.ea && ownedArmor.has(state.ea)) equipArmor(state.ea);
+    if(state.h){ horseOwned = true; spawnHorse(); }
+    const validStatus = new Set(['available','active','ready','done']);
+    if(Array.isArray(state.m)){
+      state.m.forEach((entry, idx)=>{
+        const m = MISSIONS[idx];
+        if(!m) return;
+        if(m.type==='raid'){
+          if(Array.isArray(entry)){
+            const [status, progress] = entry;
+            if(validStatus.has(status)) m.status = status;
+            m.progress = Math.max(0, Math.min(m.required, Number(progress)||0));
+          }
+        } else if(validStatus.has(entry)) m.status = entry;
+      });
+    }
+    updateMissionHUD();
+    const gc = document.getElementById('goldCount'); if(gc) gc.textContent = gold;
+  }
+
+  // ================= DEATH / RESPAWN =================
+  let lastPassword = '';
+  function onPlayerDeath(){
+    P.dead = true;
+    if(wizardBoss){ scene.remove(wizardBoss.mesh); wizardBoss=null; }
+    wizardActive=false; wizardVulnerable=false; wizardVulnerableTimer=0; wizardShotTimer=5;
+    updateBossHealthHUD();
+    for(let i=projectiles.length-1;i>=0;i--){ scene.remove(projectiles[i].mesh); projectiles.splice(i,1); }
+    phase = 'dead';
+    intentionalUnlock = true;
+    document.exitPointerLock();
+    for(let i=villagers.length-1;i>=0;i--){ if(villagers[i].isGuard && !villagers[i].isOutskirtGuard){ scene.remove(villagers[i].mesh); villagers.splice(i,1); } }
+    guardCallTimer = null; alertLevel = 0; peaceTimer = 0; updateAlertHUD(); VILLAGES.forEach(v=>{ villageTimers[v.id].alerted=false; });
+    cancelActiveMissions();
+    lastPassword = buildPassword();
+    renderDead();
+  }
+  function respawn(){
+    intentionalUnlock=false;
+    player.position.set(SPAWN_POS.x,0,SPAWN_POS.z); yaw=0; pitch=0;
+    horseMounted=false;
+    P.health=P.maxHealth; P.stamina=P.maxStamina; P.armor=P.maxArmor; P.dead=false;
+    swinging=false; swingCooldown=0; isDrawing=false; drawTime=0; bowCooldown=0;
+    weaponMode='melee'; updateWeaponModeVisuals();
+    // Death ends any active guard countdown; respawn does not start a new one.
+    guardCallTimer = null;
+    const loiterPrompt = document.getElementById('loiterPrompt');
+    if(loiterPrompt) loiterPrompt.style.display = 'none';
+    phase='play';
+    const ok=requestMouseLock();
+    if(!ok){ phase='paused'; renderPaused(); }
+  }
+
+  // ================= SHOP =================
+  function openShop(){
+    isDrawing=false; drawTime=0;
+    document.getElementById('drawBar').style.display='none';
+    swinging=false; hitRegistered=false;
+    phase='shop';
+    intentionalUnlock=true;
+    document.exitPointerLock();
+    renderShop();
+  }
+  function closeShop(){
+    isDrawing=false; drawTime=0;
+    document.getElementById('drawBar').style.display='none';
+    intentionalUnlock=false;
+    phase='play';
+    const ok=requestMouseLock();
+    if(!ok){ phase='paused'; renderPaused(); }
+  }
+  function openMissions(){
+    isDrawing=false; drawTime=0;
+    document.getElementById('drawBar').style.display='none';
+    swinging=false; hitRegistered=false;
+    phase='missions';
+    intentionalUnlock=true;
+    document.exitPointerLock();
+    renderMissions();
+  }
+  function closeMissions(){
+    intentionalUnlock=false;
+    phase='play';
+    const ok=requestMouseLock();
+    if(!ok){ phase='paused'; renderPaused(); }
+  }
+
+  // ================= UI RENDERING =================
+  const overlay = document.getElementById('overlay');
+  function renderStart(){
+    phase='start';
+    overlay.innerHTML = `
+      <h1>MERCENARY FOR VILLAGERS</h1>
+      <div class="sub">An Open City, Ripe For The Taking</div>
+      <div class="controls">
+        <b>WASD</b> move &nbsp;•&nbsp; <b>Shift</b> sprint &nbsp;•&nbsp; <b>Mouse</b> look<br>
+        <b>Click</b> attack with your active weapon &nbsp;•&nbsp; <b>Space</b> switch sword/bow<br>
+        <b>E</b> shop at the stall by your longship &nbsp;•&nbsp; <b>Esc</b> pause<br>
+        The blue tent across from the market stall hands out paid missions — bounties on marked city villagers and raid contracts on named villages.<br><br>
+        When a villager becomes scared, a 5–10 minute guard countdown starts or restarts.<br>
+        A disguise keeps villagers from being scared just by seeing you.<br>
+        But hurting someone while disguised scares nearby witnesses and starts the countdown.<br>
+        Each time they're called, tougher guards come looking for you.<br>
+        The villages are scattered across a huge region, with signs marking the roads.<br>
+        Stonegate Village is heavily fortified with four archer towers and a huge population.<br>Every 20 minutes, each guarded village can receive its own Village Warden, who attacks you even while disguised.<br>Beware the <b>Wizard Boss</b>: reach the tall dark keep just past your spawn, near the plaza. Its top is sealed by a ward until every mission at the tent is turned in. He is extremely powerful, but becomes vulnerable after his attacks — strike while he is exposed.
+      </div>
+      <button class="bigbtn" data-action="begin">Enter The City</button>
+      <div class="controls" style="margin-top:26px;margin-bottom:8px;max-width:460px;">
+        Got a password from a previous run? Enter it below to start with your gold and gear.
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;">
+        <input id="startPasswordBox" type="text" value="" placeholder="XXX-XXXXXX..."
+          style="font-family:monospace;font-size:13px;padding:9px 12px;width:min(360px,70vw);background:rgba(0,0,0,.5);border:1px solid rgba(154,163,171,.4);border-radius:4px;color:var(--bone);text-align:center;">
+        <button class="bigbtn" style="font-size:12px;padding:9px 16px;margin-top:0;" data-action="begin-with-password">Load & Enter</button>
+      </div>
+      <div class="sub" id="startPasswordMsg" style="min-height:14px;font-size:11px;letter-spacing:1px;margin-top:8px;"></div>
+    `;
+    overlay.style.display='flex';
+  }
+  function renderPaused(){
+    // Esc opens this screen during play; refresh the save code so it captures
+    // the player's current gold, kills, weapons, armor, and horse state.
+    lastPassword = buildPassword();
+    overlay.innerHTML = `
+      <h1 style="font-size:32px">PAUSED</h1>
+      <div class="controls" style="max-width:560px">
+        Current save code — copy it to continue this run later from the start screen.
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;justify-content:center;">
+        <input id="pausePasswordBox" type="text" readonly value="${lastPassword}"
+          style="font-family:monospace;font-size:13px;padding:9px 12px;width:min(420px,70vw);background:rgba(0,0,0,.5);border:1px solid rgba(214,138,60,.5);border-radius:4px;color:var(--bone);text-align:center;">
+        <button class="bigbtn" style="font-size:12px;padding:9px 16px;margin-top:0;" data-action="copy-pause-password">Copy Save Code</button>
+      </div>
+      <div class="sub" id="pauseCopyMsg" style="min-height:14px;font-size:11px;letter-spacing:1px;margin-bottom:10px;"></div>
+      <button class="bigbtn" data-action="resume">Resume</button>
+    `;
+    overlay.style.display='flex';
+    const box = document.getElementById('pausePasswordBox');
+    if(box) box.addEventListener('click', ()=>box.select());
+  }
+  function renderDead(){
+    overlay.innerHTML = `
+      <h1 style="font-size:32px">YOU HAVE FALLEN</h1>
+      <div class="sub">Gold kept: ${gold} — Kills: ${P.kills}</div>
+      <div class="controls" style="max-width:520px">
+        Write down this password. If you log out, enter it at the start screen
+        to come back with your gold and gear right where your next respawn would be.
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:18px;flex-wrap:wrap;justify-content:center;">
+        <input id="deathPasswordBox" type="text" readonly value="${lastPassword}"
+          style="font-family:monospace;font-size:13px;padding:9px 12px;width:min(420px,70vw);background:rgba(0,0,0,.5);border:1px solid rgba(214,138,60,.5);border-radius:4px;color:var(--bone);text-align:center;">
+        <button class="bigbtn" style="font-size:12px;padding:9px 16px;margin-top:0;" data-action="copy-password">Copy</button>
+      </div>
+      <div class="sub" id="deathCopyMsg" style="min-height:14px;font-size:11px;letter-spacing:1px;"></div>
+      <button class="bigbtn" data-action="respawn">Respawn At The Plaza</button>
+    `;
+    overlay.style.display='flex';
+    const box = document.getElementById('deathPasswordBox');
+    if(box) box.addEventListener('click', ()=>box.select());
+  }
+  function renderShop(){
+    function weaponCard(w){
+      const owned = ownedWeapons.has(w.id);
+      const equipped = (w.type==='melee' ? equippedWeaponId===w.id : equippedBowId===w.id);
+      let btn;
+      if(equipped) btn = `<button class="owned" disabled>Equipped</button>`;
+      else if(owned) btn = `<button class="owned" data-action="equip-weapon" data-id="${w.id}">Equip</button>`;
+      else btn = `<button data-action="buy-weapon" data-id="${w.id}" ${gold<w.cost?'disabled':''}>Buy — ${w.cost}g</button>`;
+      const statLine = w.type==='melee'
+        ? `<div class="stat">Swing speed: ${(1/w.cooldown).toFixed(2)}/s</div><div class="stat">Reach: ${w.range.toFixed(1)}m</div>`
+        : `<div class="stat">Draw time: ${w.drawTime.toFixed(2)}s</div><div class="stat">Range: ${w.range}m</div>`;
+      return `<div class="wcard ${equipped?'equipped':''}"><h4>${w.name}</h4><div class="stat">Damage: ${w.dmg[0]}–${w.dmg[1]}</div>${statLine}${btn}</div>`;
+    }
+    function armorCard(a){
+      const owned = ownedArmor.has(a.id);
+      const equipped = equippedArmorId===a.id;
+      let btn;
+      if(equipped) btn = `<button class="owned" disabled>Equipped</button>`;
+      else if(owned) btn = `<button class="owned" data-action="equip-armor" data-id="${a.id}">Equip</button>`;
+      else btn = `<button data-action="buy-armor" data-id="${a.id}" ${gold<a.cost?'disabled':''}>Buy — ${a.cost}g</button>`;
+      let extra = `+${a.armorHp} armor`;
+      if(a.blockArrows) extra += ` · blocks ${Math.round(a.blockArrows*100)}% arrow dmg`;
+      if(a.disguise) extra = `+${a.armorHp} armor · hides you from guards & villagers until you attack`;
+      return `<div class="wcard ${equipped?'equipped':''}"><h4>${a.name}</h4><div class="stat">${extra}</div>${btn}</div>`;
+    }
+    const swordCards = WEAPONS.filter(w=>w.type==='melee').map(weaponCard).join('');
+    const bowCards = WEAPONS.filter(w=>w.type==='bow' && w.id!=='flamebow').map(weaponCard).join('');
+    const armorCards = ARMORS.map(armorCard).join('');
+    overlay.innerHTML = `
+      <h1 style="font-size:32px">MARKET STALL</h1>
+      <div class="statusrow"><span>⛁ <b>${gold}</b> gold</span><span>Alert level: <b>${alertLevel}</b></span></div>
+      <div class="sectionLabel">Swords</div>
+      <div class="shopgrid">${swordCards}</div>
+      <div class="sectionLabel">Bows — click to draw, release to loose (Space to switch)</div>
+      <div class="shopgrid">${bowCards}</div>
+      <div class="sectionLabel">Armor — pick one</div>
+      <div class="shopgrid">${armorCards}</div>
+      <div class="sectionLabel">Horse</div>
+      <div class="wcard ${horseOwned?'equipped':''}"><h4>Swift Horse</h4><div class="stat">Fast travel across the region</div><div class="stat">Speed: ${HORSE_SPEED} · Sprint: ${HORSE_SPRINT_SPEED}</div>${horseOwned?'<button class="owned" disabled>Owned</button>':`<button data-action="buy-horse" ${gold<HORSE_COST?'disabled':''}>Buy — ${HORSE_COST}g</button>`}</div>
+      <div class="controls">Press <b>H</b> near your horse to mount or dismount.</div>
+      <button class="bigbtn" data-action="close-shop">Back To The Streets</button>
+    `;
+    overlay.style.display='flex';
+  }
+
+  function renderMissions(){
+    function missionCard(m){
+      let btn, statusLine;
+      if(m.status==='available'){
+        statusLine = m.type==='raid' ? `Kill ${m.required} villagers in this village` : `Track and kill the marked target`;
+        btn = `<button data-action="accept-mission" data-id="${m.id}">Accept — pays ${m.reward}g</button>`;
+      } else if(m.status==='active'){
+        statusLine = m.type==='raid' ? `Progress: ${m.progress}/${m.required}` : `Target marked in the city — find and kill him`;
+        btn = `<button class="owned" disabled>In Progress</button>`;
+      } else if(m.status==='ready'){
+        statusLine = 'Objective complete!';
+        btn = `<button data-action="turn-in-mission" data-id="${m.id}">Turn In — collect ${m.reward}g</button>`;
+      } else {
+        statusLine = 'Completed';
+        btn = `<button class="owned" disabled>Done</button>`;
+      }
+      return `<div class="wcard ${m.status==='ready'?'equipped':''}" style="width:260px;">
+        <h4>${m.title}</h4>
+        <div class="stat">${m.desc}</div>
+        <div class="stat" style="margin-top:6px;color:var(--amber)">${statusLine}</div>
+        ${btn}
+      </div>`;
+    }
+    const bountyCards = MISSIONS.filter(m=>m.type==='bounty').map(missionCard).join('');
+    const raidCards = MISSIONS.filter(m=>m.type==='raid').map(missionCard).join('');
+    overlay.innerHTML = `
+      <h1 style="font-size:32px">MISSION TENT</h1>
+      <div class="statusrow"><span>⛁ <b>${gold}</b> gold</span></div>
+      <div class="sectionLabel">Bounties — marked villagers in the city</div>
+      <div class="shopgrid">${bountyCards}</div>
+      <div class="sectionLabel">Raids — clear out named villages</div>
+      <div class="shopgrid">${raidCards}</div>
+      <button class="bigbtn" data-action="close-missions">Back To The Streets</button>
+    `;
+    overlay.style.display='flex';
+  }
+
+  overlay.addEventListener('click', (e)=>{
+    const el = e.target.closest('[data-action]');
+    if(!el) return;
+    const action = el.dataset.action;
+    if(action==='begin'){ startGame(); }
+    else if(action==='begin-with-password'){
+      const input = document.getElementById('startPasswordBox');
+      const msg = document.getElementById('startPasswordMsg');
+      const state = parsePassword(input ? input.value : '');
+      if(!state){
+        if(msg){ msg.style.color = 'var(--blood-bright)'; msg.textContent = 'INVALID PASSWORD — CHECK AND TRY AGAIN'; }
+        return;
+      }
+      applyPassword(state);
+      startGame();
+    }
+    else if(action==='copy-password' || action==='copy-pause-password'){
+      const isPause = action==='copy-pause-password';
+      const box = document.getElementById(isPause ? 'pausePasswordBox' : 'deathPasswordBox');
+      const msg = document.getElementById(isPause ? 'pauseCopyMsg' : 'deathCopyMsg');
+      if(box){
+        box.select();
+        let copied = false;
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(box.value).then(()=>{
+            if(msg) msg.textContent = 'COPIED TO CLIPBOARD';
+          }).catch(()=>{
+            if(msg) msg.textContent = 'COULD NOT COPY — TEXT IS SELECTED, USE CTRL/CMD+C';
+          });
+          copied = true;
+        }
+        if(!copied && msg) msg.textContent = 'TEXT SELECTED — USE CTRL/CMD+C TO COPY';
+      }
+    }
+    else if(action==='retry-load'){ location.reload(); }
+    else if(action==='enter-world'){ enterWorldAfterLoad(); }
+    else if(action==='resume'){
+      if(P.dead) return;
+      phase='play';
+      intentionalUnlock=false;
+      const ok=requestMouseLock();
+      if(!ok){ phase='paused'; renderPaused(); }
+    }
+    else if(action==='respawn'){ respawn(); }
+    else if(action==='close-shop'){ closeShop(); }
+    else if(action==='buy-weapon'){
+      const w = WEAPONS.find(w=>w.id===el.dataset.id);
+      if(w && gold>=w.cost && !ownedWeapons.has(w.id)){ gold -= w.cost; ownedWeapons.add(w.id); equipWeapon(w.id); renderShop(); }
+    }
+    else if(action==='equip-weapon'){ equipWeapon(el.dataset.id); renderShop(); }
+    else if(action==='buy-armor'){
+      const a = ARMORS.find(a=>a.id===el.dataset.id);
+      if(a && gold>=a.cost && !ownedArmor.has(a.id)){ gold -= a.cost; ownedArmor.add(a.id); equipArmor(a.id); renderShop(); }
+    }
+    else if(action==='equip-armor'){ equipArmor(el.dataset.id); renderShop(); }
+    else if(action==='buy-horse'){ buyHorse(); }
+    else if(action==='close-missions'){ closeMissions(); }
+    else if(action==='accept-mission'){ acceptMission(el.dataset.id); renderMissions(); }
+    else if(action==='turn-in-mission'){ turnInMission(el.dataset.id); renderMissions(); }
+  });
+
+  let worldBuilt = false;
+  let worldInitQueue = [];
+  let worldInitIndex = 0;
+  let worldInitStarted = false;
+  let worldInitError = null;
+
+  function renderLoading(){
+    const total = Math.max(1, worldInitQueue.length);
+    const done = Math.min(worldInitIndex, total);
+    const pct = Math.floor((done/total)*100);
+    overlay.innerHTML = `
+      <h1 style="font-size:30px">BUILDING THE WORLD</h1>
+      <div class="sub">Preparing the city and villages</div>
+      <div class="loadingSpinner"></div>
+      <div class="controls">Please wait — building the city, villages, roads, towers, signs, and shoreline before you enter.</div>
+      <div style="width:min(560px,80vw);height:16px;background:rgba(0,0,0,.55);border:1px solid rgba(232,220,200,.35);border-radius:4px;overflow:hidden;margin:10px 0 8px;">
+        <div id="loadFill" style="width:${pct}%;height:100%;background:linear-gradient(90deg,#8a1f1f,#d68a3c);"></div>
+      </div>
+      <div id="loadText" style="font-size:12px;color:#cfc3ae;">${pct}% loaded</div>
+    `;
+    overlay.style.display='flex';
+  }
+
+  function renderReady(){
+    overlay.innerHTML = `
+      <h1 style="font-size:30px">CITY READY</h1>
+      <div class="sub">The world is fully loaded</div>
+      <div class="controls">Click below to enter. Your mouse will lock to the game screen.</div>
+      <button class="bigbtn" data-action="enter-world">ENTER WORLD</button>
+    `;
+    overlay.style.display='flex';
+  }
+
+  function renderLoadError(err){
+    const message = err && err.message ? err.message : String(err || 'Unknown world-building error');
+    overlay.innerHTML = `
+      <h1 style="font-size:30px">WORLD LOAD ERROR</h1>
+      <div class="sub">The city could not finish building</div>
+      <div class="controls">The game has been stopped so you are not released into a partially loaded world.</div>
+      <div style="max-width:760px;margin:8px 0 16px;padding:10px 14px;background:rgba(120,20,20,.25);border:1px solid rgba(199,62,62,.5);border-radius:5px;font:12px/1.5 monospace;color:#e8dcc8;overflow:auto;max-height:120px;">${message.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}</div>
+      <button class="bigbtn" data-action="retry-load">RETRY WORLD BUILD</button>
+    `;
+    overlay.style.display='flex';
+  }
+
+  function enterWorldAfterLoad(){
+    if(phase!=='ready') return;
+    intentionalUnlock=false;
+    requestMouseLock();
+  }
+
+  function startGame(){
+    if(worldInitStarted) return;
+    worldInitStarted = true;
+    worldTime = 0;
+    dayNumber = 1;
+    updateDayNight(0);
+    phase='loading';
+    document.getElementById('hud').style.display='none';
+
+    player.position.set(SPAWN_POS.x,0,SPAWN_POS.z);
+    yaw=0; pitch=0;
+    applySwordVisual(currentWeapon);
+    updateWeaponModeVisuals();
+    updateAlertHUD();
+
+    worldInitQueue = [
+      ()=>buildOcean(),
+      ()=>addWaterBarrier(),
+      ()=>buildTownSquare(),
+      ()=>buildMarketPlace(),
+      ()=>buildShopStall(),
+      ()=>buildMissionTent(),
+      ()=>buildCity(),
+      ...VILLAGES.map(v=>()=>{
+        buildVillage(v);
+        if(v.guardCount>0){
+          buildVillageGuardTower(v);
+          buildVillageWardenAltar(v);
+        }
+        const initial=Math.min(v.villagerTarget, v.fortified ? 18 : 7);
+        for(let i=0;i<initial;i++) spawnVillageVillager(v);
+        if(v.guardCount>0) ensureVillageGuards(v);
+        villageTimers[v.id]={guardRefill:v.guardRefill,boss:v.bossInterval,alerted:false};
+      }),
+      ()=>buildVillageDirectionSigns(),
+      ()=>buildVillagePaths(),
+      ()=>buildRemoteWilderness(),
+      ()=>buildWizardTower()
+    ];
+    worldInitIndex=0;
+    worldInitError=null;
+    worldBuilt=true;
+    renderLoading();
+  }
+
+  renderStart();
+
+
+
+
+  // ================= VILLAGE PATHS =================
+  function buildVillagePaths(){
+    const pathMat=new THREE.MeshStandardMaterial({color:0x8a7355,roughness:.98});
+    const edgeMat=new THREE.MeshStandardMaterial({color:0x6f5c45,roughness:1});
+
+    function addPath(x1,z1,x2,z2,width=12){
+      const dx=x2-x1, dz=z2-z1, distance=Math.hypot(dx,dz);
+      const steps=Math.max(2,Math.ceil(distance/24));
+      for(let i=0;i<steps;i++){
+        const a=i/steps,b=(i+1)/steps;
+        const ax=x1+dx*a,az=z1+dz*a,bx=x1+dx*b,bz=z1+dz*b;
+        const mx=(ax+bx)/2,mz=(az+bz)/2;
+        const len=Math.hypot(bx-ax,bz-az);
+        const angle=Math.atan2(bx-ax,bz-az);
+
+        const shoulder=new THREE.Mesh(
+          new THREE.BoxGeometry(width+2,.035,len+2),edgeMat
+        );
+        shoulder.position.set(mx,.025,mz);
+        shoulder.rotation.y=angle;
+        scene.add(shoulder);
+
+        const segment=new THREE.Mesh(
+          new THREE.BoxGeometry(width,.08,len+1),pathMat
+        );
+        segment.position.set(mx,.045,mz);
+        segment.rotation.y=angle;
+        scene.add(segment);
+      }
+    }
+
+    if(Array.isArray(VILLAGES)){
+      VILLAGES.forEach(v=>{
+        if(v && Number.isFinite(v.x) && Number.isFinite(v.z)){
+          const dist = Math.hypot(v.x,v.z);
+          const startDist = CITY_EXTENT + 30;
+          const dirX = dist>0 ? v.x/dist : 0, dirZ = dist>0 ? v.z/dist : 0;
+          addPath(dirX*startDist, dirZ*startDist, v.x, v.z, 12);
+        }
+      });
+    }
+  }
+
+  // ================= REMOTE WILDERNESS =================
+  // One-mile settlement exclusion: 100 world units = 1 mile.
+  // Absolutely no wilderness trees/lakes are generated inside this radius
+  // of the city or any village. Clear road corridors remain open.
+  const SETTLEMENT_WILDERNESS_LIMIT = 100;
+  // Extra buffer on top of the strict boundary so there's a clearly visible
+  // gap between the treeline and any settlement wall or building, not just
+  // a technical non-overlap.
+  const SETTLEMENT_CLEARANCE = 25;
+
+  function buildRemoteWilderness(){
+    const settlementZones = VILLAGES.map(v=>({x:v.x,z:v.z,r:SETTLEMENT_WILDERNESS_LIMIT}));
+
+    const roadCorridors = [
+      {x1:0,z1:0,x2:-269,z2:224,width:16},
+      {x1:0,z1:0,x2:-273,z2:-202,width:16},
+      {x1:0,z1:0,x2:-65,z2:-283,width:16},
+      {x1:0,z1:0,x2:127,z2:277,width:16},
+      {x1:0,z1:0,x2:283,z2:-283,width:16}
+    ];
+
+    function outsideSettlements(x,z,extra=0){
+      // The main city is a square grid of buildings (CITY_EXTENT half-width),
+      // not a circle. A purely circular check centered on the origin lets
+      // trees near a forest region's far corner (distance-wise, well past
+      // the old 100-unit radius) land squarely inside the city's actual
+      // square footprint. Check the city as a box, and villages (which are
+      // small and roughly circular) as circles around their centers.
+      // SETTLEMENT_CLEARANCE adds a wide visible buffer on top of that, so
+      // the treeline sits clearly away from walls/buildings rather than
+      // brushing right up against them.
+      const buffer = extra + SETTLEMENT_CLEARANCE;
+      if(Math.abs(x) < CITY_EXTENT+buffer && Math.abs(z) < CITY_EXTENT+buffer) return false;
+      return settlementZones.every(s =>
+        Math.hypot(x-s.x,z-s.z) >= s.r + buffer
+      );
+    }
+
+    function outsideRoads(x,z,extra=0){
+      return roadCorridors.every(p=>{
+        const dx=p.x2-p.x1, dz=p.z2-p.z1;
+        const len2=dx*dx+dz*dz;
+        const t=Math.max(0,Math.min(1,
+          ((x-p.x1)*dx+(z-p.z1)*dz)/len2
+        ));
+        const px=p.x1+t*dx, pz=p.z1+t*dz;
+        return Math.hypot(x-px,z-pz) >= p.width+extra;
+      });
+    }
+
+    // Visible roads: broad, gently segmented dirt paths connecting the city
+    // directly to every village. They stay clear of wilderness generation.
+    
+
+    const trunkMat=new THREE.MeshStandardMaterial({color:0x573a25});
+    const leafMats=[
+      new THREE.MeshStandardMaterial({color:0x29482a}),
+      new THREE.MeshStandardMaterial({color:0x356034}),
+      new THREE.MeshStandardMaterial({color:0x203b25})
+    ];
+
+    // Water exclusion: trees must never spawn in the ocean or inside lakes.
+    const lakeExclusionZones=[
+      {x:-220,z:-220,rx:43,rz:33},
+      {x:220,z:220,rx:39,rz:51},
+      {x:-720,z:-215,rx:47,rz:35}
+    ];
+
+    function onWater(x,z,margin=0){
+      // Treat the far ocean edge as water. The playable land is kept inside
+      // this boundary, with a generous buffer so trees cannot appear in it.
+      const oceanLimit=1100-margin;
+      if(Math.abs(x)>oceanLimit || Math.abs(z)>oceanLimit) return true;
+
+      // The real ocean starts much closer in, just past the eastern shoreline
+      // (same boundary as the water collision wall), and only runs along a
+      // band roughly -210..210 in z. Without this check, wilderness forests
+      // that dip into that band near the coast were seeding trees straight
+      // into the sea, since only the far-away 1200 limit was being tested
+      // above. Land north/south of the ocean band (villages, forests past
+      // z=±210) is unaffected.
+      if(x > WATER_WALL_X - margin && Math.abs(z) < 210 + margin) return true;
+
+      return lakeExclusionZones.some(l=>{
+        const nx=(x-l.x)/(l.rx+margin);
+        const nz=(z-l.z)/(l.rz+margin);
+        return nx*nx+nz*nz <= 1;
+      });
+    }
+
+    function addForestTree(x,z,s){
+      if(onWater(x,z,3)) return;
+      const g=new THREE.Group();
+      const trunk=new THREE.Mesh(
+        new THREE.CylinderGeometry(.28*s,.42*s,3.2*s,7),trunkMat
+      );
+      trunk.position.y=1.6*s;
+      g.add(trunk);
+
+      const crown=new THREE.Mesh(
+        new THREE.ConeGeometry(2*s,5*s,8),
+        leafMats[Math.floor(Math.random()*leafMats.length)]
+      );
+      crown.position.y=4.8*s;
+      g.add(crown);
+
+      g.position.set(x,0,z);
+      scene.add(g);
+      obstacles.push({x,z,radius:1.3*s});
+    }
+
+    // Forest regions are deliberately beyond the one-mile ring.
+    const forests=[
+      {x:-195,z:-128,w:100,d:92},
+      {x:195,z:128,w:100,d:92},
+      {x:-212,z:212,w:92,d:82},
+      {x:220,z:-212,w:92,d:82},
+      {x:-722,z:255,w:118,d:108},
+      {x:765,z:-425,w:118,d:108}
+    ];
+
+    forests.forEach(f=>{
+      let n=0, tries=0;
+      while(n<48 && tries<900){
+        tries++;
+        const x=f.x+(Math.random()-.5)*f.w;
+        const z=f.z+(Math.random()-.5)*f.d;
+        if(onWater(x,z,4)) continue;
+        if(!outsideSettlements(x,z,3) || !outsideRoads(x,z,4)) continue;
+        addForestTree(x,z,.75+Math.random()*.75);
+        n++;
+      }
+    });
+
+    // Lakes are also outside the one-mile settlement boundary and road corridors.
+    const lakeMat=new THREE.MeshStandardMaterial({
+      color:0x3f7180,transparent:true,opacity:.82,
+      roughness:.2,metalness:.05
+    });
+    const bankMat=new THREE.MeshStandardMaterial({color:0x687353});
+
+    [
+      {x:-220,z:-220,rx:34,rz:25},
+      {x:220,z:220,rx:31,rz:41},
+      {x:-722,z:-215,rx:38,rz:27}
+    ].forEach(l=>{
+      const safe=Math.max(l.rx,l.rz)+8;
+      if(!outsideSettlements(l.x,l.z,safe) ||
+         !outsideRoads(l.x,l.z,safe)) return;
+
+      const bank=new THREE.Mesh(
+        new THREE.CylinderGeometry(1,1,.16,48),bankMat
+      );
+      bank.scale.set(l.rx+5,1,l.rz+5);
+      bank.position.set(l.x,.05,l.z);
+      scene.add(bank);
+
+      const water=new THREE.Mesh(
+        new THREE.CylinderGeometry(1,1,.08,48),lakeMat
+      );
+      water.scale.set(l.rx,1,l.rz);
+      water.position.set(l.x,.15,l.z);
+      scene.add(water);
+    });
+  }
+
+  // ================= MAIN LOOP =================
+  // Performance optimization: expensive AI/DOM work runs at up to 30 Hz while
+  // camera, movement, particles and rendering remain at full frame rate.
+  let aiAccumulator = 0;
+  let hudAccumulator = 0;
+  const clock = new THREE.Clock();
+  let popTimer = 0;
+  let populationBacklog = 0;
+  function animate(){
+    requestAnimationFrame(animate);
+    const dt = Math.min(0.05, clock.getDelta());
+    if(worldBuilt && worldInitIndex < worldInitQueue.length){
+      try{
+        const step = worldInitQueue[worldInitIndex++];
+        step();
+        const total=worldInitQueue.length;
+        const pct=Math.floor((worldInitIndex/total)*100);
+        const fill=document.getElementById('loadFill');
+        const text=document.getElementById('loadText');
+        if(fill) fill.style.width=pct+'%';
+        if(text) text.textContent=pct+'% loaded';
+      }catch(err){
+        console.error('World build step failed:',err);
+        worldInitError = err;
+        worldBuilt = false;
+        phase = 'load-error';
+        renderLoadError(err);
+      }
+      if(!worldInitError && worldInitIndex>=worldInitQueue.length && phase==='loading'){
+        const villageCiv=villagers.filter(v=>!v.isGuard&&!v.dead).length;
+        populationBacklog=Math.max(0,TARGET_POP-villageCiv);
+        MISSIONS.forEach(m=>{ if(m.type==='bounty' && m.status==='active') spawnBountyTarget(m); });
+        updateMissionHUD();
+        phase='ready';
+        renderReady();
+      }
+    }
+    if(phase==='play' && !P.dead){
+      updateDayNight(dt);
+      updateMovement(dt);
+      updateWizardBoss(dt);
+      aiAccumulator += dt;
+      if(aiAccumulator >= 0.033){
+        const aiDt = aiAccumulator; aiAccumulator = 0;
+        updateVillagers(aiDt);
+      }
+      updateGold(dt);
+      updateSwing(dt);
+      updateBowDraw(dt);
+      updateGuardCallTimer(dt);
+
+      VILLAGES.forEach(v=>{
+        const t=villageTimers[v.id];
+        if(v.guardCount>0){
+          t.guardRefill-=dt;
+          if(t.guardRefill<=0){ t.guardRefill=v.guardRefill; ensureVillageGuards(v); }
+          t.boss-=dt;
+          if(t.boss<=0){ t.boss=v.bossInterval; spawnVillageWarden(v); }
+        }
+      });
+
+      popTimer += dt;
+      if(popTimer > 0.25){
+        popTimer = 0;
+        const civCount = villagers.filter(v=>!v.isGuard && !v.dead).length;
+        const deficit = TARGET_POP - civCount;
+        if(deficit > 0){
+          const spawnCount = Math.min(4, deficit, populationBacklog || deficit);
+          for(let i=0;i<spawnCount;i++) spawnCivilian();
+          populationBacklog = Math.max(0, populationBacklog - spawnCount);
+        }
+      }
+
+      hudAccumulator += dt;
+      if(hudAccumulator >= 0.08){ hudAccumulator = 0; updateMissionHUD(); }
+      const anyGuardAlive = villagers.some(v=>v.isGuard && !v.dead);
+      if(alertLevel>0 && !anyGuardAlive){
+        peaceTimer += dt;
+        if(peaceTimer > 20){
+          peaceTimer=0;
+          alertLevel=Math.max(0,alertLevel-1);
+          updateAlertHUD();
+        }
+      } else peaceTimer = 0;
+    }
+    updateParticles(dt);
+    updateProjectiles(dt);
+    updateEndingCamera(dt);
+    updateHUD();
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+</script>
+</body>
+</html>
